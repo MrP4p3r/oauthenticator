@@ -2,9 +2,13 @@
 
 State validation
     The callback is rejected unless its state matches the generated one,
-    which keeps a stray or forged redirect from triggering a token exchange.
-    The exchange runs once per session; a page reload re-renders the stored
-    result. restart() starts a fresh flow: it regenerates state, nonce and
+    which keeps a stray or forged redirect from triggering a token exchange
+    or from consuming the once-only guard on the error branch. RFC 6749
+    requires providers to echo state on error responses too, but some omit
+    it in practice, so a callback with no state at all is still accepted as
+    an error -- only a mismatched, present state is rejected. The exchange
+    runs once per session; a page reload re-renders the stored result.
+    restart() starts a fresh flow: it regenerates state, nonce and
     code_verifier and unlatches the guard, so a callback still in flight for
     the previous flow fails the state check instead of resurrecting it.
 
@@ -90,7 +94,13 @@ class AuthSession:
         if self._handled:
             return False
 
+        state = query.get('state', [None])[0]
+
         if 'error' in query:
+            if state is not None and state != self.state:
+                self.error = 'state mismatch, ignoring the callback'
+                return False
+
             self._handled = True
             self.error_params = {key: query[key][0] for key in
                                  ('error', 'error_description', 'error_uri') if key in query}
@@ -98,7 +108,7 @@ class AuthSession:
             self.error = f'{query["error"][0]}: {description}'.strip(': ')
             return True
 
-        if query.get('state', [None])[0] != self.state:
+        if state != self.state:
             self.error = 'state mismatch, ignoring the callback'
             return False
 

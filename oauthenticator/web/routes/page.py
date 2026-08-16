@@ -14,7 +14,7 @@ from oauthenticator.ui.web import renderer, viewmodels
 ROOT_PATH = '/'
 
 
-def build_router(session, paths):
+def build_router(session, paths, environment):
     router = APIRouter()
 
     @router.get(ROOT_PATH)
@@ -22,7 +22,7 @@ def build_router(session, paths):
         if session.tokens is not None:
             view = viewmodels.build_result_page(session, paths)
 
-            return Response(renderer.render(view), media_type='text/html')
+            return Response(renderer.render(environment, view), media_type='text/html')
 
         session.restart()
 

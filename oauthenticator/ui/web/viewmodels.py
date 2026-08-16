@@ -80,7 +80,7 @@ class ErrorView:
 
 @dataclass
 class PathsView:
-    """The route paths the page's own script calls, owned by web/ and passed in as data."""
+    """The route and static-asset paths the page references, owned by web/ and passed in as data."""
 
     root: str
     ping: str
@@ -89,6 +89,8 @@ class PathsView:
     userinfo: str
     introspect: str
     revoke: str
+    css: str
+    js: str
 
 
 @dataclass

@@ -15,7 +15,7 @@ from oauthenticator.ui.web import renderer, viewmodels
 from oauthenticator.web.routes.page import ROOT_PATH
 
 
-def build_router(session, callback_path, stdout_mode, paths):
+def build_router(session, callback_path, stdout_mode, paths, environment):
     router = APIRouter()
 
     @router.get(callback_path)
@@ -29,13 +29,13 @@ def build_router(session, callback_path, stdout_mode, paths):
         if stdout_mode:
             view = viewmodels.build_notice(session)
 
-            return Response(renderer.render_notice(view), media_type='text/html')
+            return Response(renderer.render_notice(environment, view), media_type='text/html')
 
         if session.tokens is not None and session.error is None:
             return RedirectResponse(ROOT_PATH, status_code=303)
 
         view = viewmodels.build_result_page(session, paths)
 
-        return Response(renderer.render(view), media_type='text/html')
+        return Response(renderer.render(environment, view), media_type='text/html')
 
     return router

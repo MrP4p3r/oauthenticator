@@ -1,0 +1,15 @@
+{% extends 'base.html.j2' %}
+
+{% block head %}
+<style>
+body { font-family: sans-serif; margin: 4rem auto; max-width: 30rem; text-align: center;
+       color: #444; }
+@media (prefers-color-scheme: dark) { body { background: #16181c; color: #b8bec6; } }
+</style>
+{% endblock %}
+
+{% block body %}
+<p>{{ view.message }}</p>
+<p>You can close this tab.</p>
+<script>window.close();</script>
+{% endblock %}

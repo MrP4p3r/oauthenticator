@@ -1,0 +1,34 @@
+{% extends 'base.html.j2' %}
+{% from 'macros.html.j2' import session_actions, identity_block, extras_chips, tabs, error_block %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ view.paths.css }}">
+{% endblock %}
+
+{% block body_attrs %}
+ data-action-token="{{ view.action_token }}"
+ data-ping-path="{{ view.paths.ping }}"
+ data-ping-interval="{{ ping_interval }}"
+ data-quit-path="{{ view.paths.quit }}"
+ data-refresh-path="{{ view.paths.refresh }}"
+ data-userinfo-path="{{ view.paths.userinfo }}"
+ data-introspect-path="{{ view.paths.introspect }}"
+ data-revoke-path="{{ view.paths.revoke }}"
+{% endblock %}
+
+{% block body %}
+<div class="bar">
+<h1>{{ view.title }}</h1>
+<p class="note">The CLI runs while this page is open.</p>
+{{ session_actions(view.session_actions) }}
+<button onclick="quitCli(this)">Finish and exit CLI</button>
+</div>
+{% if view.error is not none %}
+{{ error_block(view.error, view.paths.root) }}
+{% else %}
+{{ identity_block(view.identity) }}
+{{ extras_chips(view.extras) }}
+{{ tabs(view.tokens, view.userinfo) }}
+{% endif %}
+<script src="{{ view.paths.js }}"></script>
+{% endblock %}

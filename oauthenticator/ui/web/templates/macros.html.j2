@@ -1,0 +1,146 @@
+{% macro expiry(expires_at) %}
+{%- if expires_at is not none -%}
+expires {{ expires_at | format_time }} &middot; <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
+{%- endif -%}
+{% endmacro %}
+
+
+{% macro session_actions(actions) %}
+{% if actions.can_refresh %}
+<button onclick="refreshTokens(this)">Refresh the token set</button>
+{% endif %}
+{% if actions.end_session_url is not none %}
+<button class="danger" data-url="{{ actions.end_session_url }}" onclick="endSession(this)">End provider session</button>
+{% endif %}
+{% endmacro %}
+
+
+{% macro identity_block(identity) %}
+{% if identity.source is none %}
+<div class="identity"><div class="who">
+<div class="name">Unknown user</div>
+<div class="line">the response carries no JWT to decode</div>
+</div></div>
+{% else %}
+<div class="identity">
+{% if identity.picture is not none %}
+<img src="{{ identity.picture }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">
+{% endif %}
+<div class="who">
+<div class="name">{{ identity.name }}</div>
+{% if identity.email is not none %}
+<div class="line">{{ identity.email }}{% if identity.email_verified %} ✓ verified{% endif %}</div>
+{% endif %}
+{% if identity.facts %}
+<div class="line">{% for key, value in identity.facts %}{% if not loop.first %} &middot; {% endif %}{{ key }} <span class="mono">{{ value }}</span>{% endfor %}</div>
+{% endif %}
+{% if identity.expires_at is not none %}
+<div class="line">{{ expiry(identity.expires_at) }}</div>
+{% endif %}
+</div>
+<span class="badge">{{ identity.source }}</span>
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{% macro extras_chips(extras) %}
+{% if extras %}
+<div class="meta">{% for name, text in extras %}<span class="chip"><b>{{ name }}</b> {{ text }}</span>{% endfor %}</div>
+{% endif %}
+{% endmacro %}
+
+
+{% macro token_actions(panel) %}
+{% if panel.is_id_token %}
+<p class="note">An id_token is not an OAuth token: introspection and revocation do not apply to it.</p>
+{% elif panel.can_curl or panel.can_introspect or panel.can_revoke %}
+<div class="actions">
+{% if panel.can_curl %}
+<button data-curl="{{ panel.curl_command }}" onclick="copyCurl(this)">Copy as curl</button>
+{% endif %}
+{% if panel.can_introspect %}
+<button onclick="introspect('{{ panel.name }}')">Introspect</button>
+{% endif %}
+{% if panel.can_revoke %}
+<button class="danger" onclick="revoke('{{ panel.name }}')">Revoke</button>
+{% endif %}
+</div>
+{% endif %}
+{% endmacro %}
+
+
+{% macro times_block(times) %}
+{% if times %}
+<div class="times">{% for time_claim in times %}<div class="line"><b>{{ time_claim.claim }}</b> {{ time_claim.value | format_time }} &middot; <span data-time="{{ time_claim.value | format_epoch }}"{% if time_claim.is_deadline %} data-deadline{% endif %}></span></div>{% endfor %}</div>
+{% endif %}
+{% endmacro %}
+
+
+{% macro claims(panel) %}
+{% if panel.decoded is none %}
+<p class="note">Not a JWT, nothing to decode.</p>
+{% else %}
+<h3>header</h3><pre>{{ panel.decoded.header | json_pretty }}</pre>
+<h3>payload</h3><pre>{{ panel.decoded.payload | json_pretty }}</pre>
+{{ times_block(panel.decoded.times) }}
+<h3>signature</h3><pre>{{ panel.decoded.signature }}</pre>
+{% endif %}
+{% endmacro %}
+
+
+{% macro token_panel(panel) %}
+<div class="token">
+<button title="Expand" onclick="toggleToken(this)">▸</button>
+<code class="value">{{ panel.value }}</code>
+<button title="Copy" onclick="copyValue(this)">📋</button>
+</div>
+{% if panel.expires_at is not none %}
+<p class="note">{{ expiry(panel.expires_at) }}</p>
+{% endif %}
+{{ token_actions(panel) }}
+<pre class="result" hidden></pre>
+{{ claims(panel) }}
+{% endmacro %}
+
+
+{% macro userinfo_panel(userinfo) %}
+<div class="actions">
+<button onclick="reloadUserinfo()">Fetch again</button>
+</div>
+{% if userinfo.data is not none %}
+<pre class="result">{{ userinfo.data | json_pretty }}</pre>
+{% else %}
+<pre class="result failed">{{ userinfo.error or 'not fetched yet' }}</pre>
+{% endif %}
+{% endmacro %}
+
+
+{% macro tabs(tokens, userinfo) %}
+<nav class="tabs">
+{% for panel in tokens %}
+<button{% if loop.first %} class="active"{% endif %} data-tab="{{ panel.name }}" onclick="selectTab('{{ panel.name }}')">{{ panel.name }}</button>
+{% endfor %}
+<button{% if not tokens %} class="active"{% endif %} data-tab="userinfo" onclick="selectTab('userinfo')">userinfo</button>
+</nav>
+{% for panel in tokens %}
+<section class="panel{% if loop.first %} active{% endif %}{% if panel.revoked %} revoked{% endif %}" data-tab="{{ panel.name }}">
+{{ token_panel(panel) }}
+</section>
+{% endfor %}
+<section class="panel{% if not tokens %} active{% endif %}" data-tab="userinfo">
+{{ userinfo_panel(userinfo) }}
+</section>
+{% endmacro %}
+
+
+{% macro error_block(error, retry_path) %}
+<div class="identity"><div class="who">
+<div class="name failed">{{ error.headline }}</div>
+{% for line in error.lines %}<div class="line">{{ line }}</div>{% endfor %}
+</div>
+{% if error.has_callback_params %}<span class="badge">callback</span>{% endif %}
+</div>
+<p class="note"><a href="{{ retry_path }}">try again</a></p>
+<pre class="result failed">{{ error.detail }}</pre>
+{% endmacro %}
