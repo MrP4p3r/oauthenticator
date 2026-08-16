@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "CLI for the OAuth2/OIDC authorization code flow, with a browser callback and token inspection page"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.115.0",
     "httpx>=0.28.1",
+    "uvicorn>=0.34.0",
 ]
 
 [project.scripts]

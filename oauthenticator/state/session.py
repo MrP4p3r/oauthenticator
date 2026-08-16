@@ -11,9 +11,12 @@ State validation
 Once-only exchange guard
     No threading.Lock: the guard is a plain flag set synchronously, before
     the first await in complete(), so no other coroutine can observe it
-    between the check and the set. Everything else here that mutates shared
-    state does so without an intervening await too, so it needs no lock
-    either -- asyncio only switches coroutines at an await point.
+    between the check and the set. It latches only once the callback is
+    accepted -- state validated first -- so a forged or stale callback
+    cannot consume the one shot and silently block the legitimate callback
+    that follows. Everything else here that mutates shared state does so
+    without an intervening await too, so it needs no lock either -- asyncio
+    only switches coroutines at an await point.
 
 Session lifetime
     The page pings every few seconds and the CLI exits once the last ping is
@@ -77,25 +80,35 @@ class AuthSession:
         self._handled = False
 
     async def complete(self, query):
-        if self._handled:
-            return
+        """Validates and applies one callback query, returning whether it was accepted.
 
-        self._handled = True
+        The once-only guard latches synchronously, before the first await,
+        and only once the callback is accepted -- a forged or stale callback
+        that fails the state check was never this session's to consume, so
+        it must not block the legitimate one that follows.
+        """
+        if self._handled:
+            return False
 
         if 'error' in query:
+            self._handled = True
             self.error_params = {key: query[key][0] for key in
                                  ('error', 'error_description', 'error_uri') if key in query}
             description = query.get('error_description', [''])[0]
             self.error = f'{query["error"][0]}: {description}'.strip(': ')
-            return
+            return True
 
         if query.get('state', [None])[0] != self.state:
             self.error = 'state mismatch, ignoring the callback'
-            return
+            return False
+
+        self._handled = True
+        self.error = None
+        self.error_params = {}
 
         if 'code' not in query:
             self.error = 'no code in the callback query'
-            return
+            return True
 
         code = query['code'][0]
 
@@ -103,10 +116,12 @@ class AuthSession:
             issued = await self.client.exchange_code(code, self.redirect_uri, self.code_verifier)
         except OAuth2Error as error:
             self.error = str(error)
-            return
+            return True
 
         self._store(issued)
         await self.load_userinfo()
+
+        return True
 
     async def refresh(self):
         issued = await self.client.refresh(self.token_value('refresh_token'))

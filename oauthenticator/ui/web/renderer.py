@@ -9,15 +9,16 @@ from oauthenticator.ui.web import templates
 
 
 def render(view):
-    body = _render_error(view.error) if view.error is not None else _render_result(view)
+    body = (_render_error(view.error, view.paths.root) if view.error is not None
+           else _render_result(view))
 
     return templates.RESULT_PAGE.substitute(
         title=view.title, body=body, action_token=view.action_token,
         session_actions=_render_session_actions(view.session_actions),
-        ping_path=templates.PING_PATH, ping_interval=templates.PING_INTERVAL,
-        finish_path=templates.FINISH_PATH, refresh_path=templates.REFRESH_PATH,
-        userinfo_path=templates.USERINFO_PATH, introspect_path=templates.INTROSPECT_PATH,
-        revoke_path=templates.REVOKE_PATH).encode()
+        ping_path=view.paths.ping, ping_interval=templates.PING_INTERVAL,
+        quit_path=view.paths.quit, refresh_path=view.paths.refresh,
+        userinfo_path=view.paths.userinfo, introspect_path=view.paths.introspect,
+        revoke_path=view.paths.revoke).encode()
 
 
 def render_notice(view):
@@ -38,7 +39,7 @@ def _render_session_actions(actions):
     return ''.join(buttons)
 
 
-def _render_error(error):
+def _render_error(error, retry_path):
     chunks = ['<div class="identity"><div class="who">',
               f'<div class="name failed">{html.escape(error.headline)}</div>']
     chunks.extend(f'<div class="line">{html.escape(line)}</div>' for line in error.lines)
@@ -48,6 +49,7 @@ def _render_error(error):
         chunks.append('<span class="badge">callback</span>')
 
     chunks.append('</div>')
+    chunks.append(f'<p class="note"><a href="{html.escape(retry_path)}">try again</a></p>')
 
     return ''.join(chunks) + f'\n<pre class="result failed">{html.escape(error.detail)}</pre>'
 

@@ -1,18 +1,12 @@
 """The string.Template constants the result page and notice card are built from.
 
-Local server route paths for the page's own script also live here, since
-they are substituted straight into the page template and `web/server.py`
-must dispatch on the very same values.
+Route paths are never defined here: `web/` owns them and substitutes them in
+as plain values, since this module only emits the `fetch()` calls that use
+them.
 """
 
 import string
 
-PING_PATH = '/ping'
-FINISH_PATH = '/finish'
-REFRESH_PATH = '/refresh'
-USERINFO_PATH = '/userinfo'
-INTROSPECT_PATH = '/introspect'
-REVOKE_PATH = '/revoke'
 PING_INTERVAL = 5
 
 RESULT_PAGE = string.Template("""<!doctype html>
@@ -104,7 +98,7 @@ button.danger { color: var(--danger); }
 <h1>$title</h1>
 <p class="note">The CLI runs while this page is open.</p>
 $session_actions
-<button onclick="finish(this)">Finish and exit CLI</button>
+<button onclick="quitCli(this)">Finish and exit CLI</button>
 </div>
 $body
 <script>
@@ -126,9 +120,9 @@ function post(path, payload) {
 
 function ping() { fetch('$ping_path').catch(() => {}); }
 
-function finish(button) {
+function quitCli(button) {
   button.disabled = true;
-  post('$finish_path').then(() => {
+  post('$quit_path').then(() => {
     clearInterval(pinger);
     button.textContent = 'CLI stopped';
     document.querySelector('.bar .note').textContent = 'You can close this tab.';
@@ -218,7 +212,7 @@ function reloadUserinfo() {
 
 function introspect(name) {
   showResult(name, 'introspecting...');
-  post('$introspect_path', {token: name}).then(
+  post('$introspect_path/' + encodeURIComponent(name)).then(
     data => showResult(name, JSON.stringify(data, null, 2)),
     error => showResult(name, error.message, true));
 }
@@ -227,7 +221,7 @@ function revoke(name) {
   if (!window.confirm('Revoke the ' + name + '? This cannot be undone.')) { return; }
 
   showResult(name, 'revoking...');
-  post('$revoke_path', {token: name}).then(
+  post('$revoke_path/' + encodeURIComponent(name)).then(
     () => {
       showResult(name, 'revoked');
       document.querySelector('section[data-tab="' + name + '"]').classList.add('revoked');

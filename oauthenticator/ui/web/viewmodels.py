@@ -79,6 +79,19 @@ class ErrorView:
 
 
 @dataclass
+class PathsView:
+    """The route paths the page's own script calls, owned by web/ and passed in as data."""
+
+    root: str
+    ping: str
+    quit: str
+    refresh: str
+    userinfo: str
+    introspect: str
+    revoke: str
+
+
+@dataclass
 class ResultPageView:
     title: str
     action_token: str
@@ -88,6 +101,7 @@ class ResultPageView:
     extras: list
     tokens: list
     userinfo: UserinfoPanelView | None
+    paths: PathsView
 
 
 @dataclass
@@ -95,18 +109,18 @@ class NoticeView:
     message: str
 
 
-def build_result_page(session):
+def build_result_page(session, paths):
     if session.error is not None:
         return ResultPageView(
             title='Authorization failed', action_token=session.action_token,
             session_actions=_session_actions(session), error=_error_view(session),
-            identity=None, extras=[], tokens=[], userinfo=None)
+            identity=None, extras=[], tokens=[], userinfo=None, paths=paths)
 
     return ResultPageView(
         title='Authorization complete', action_token=session.action_token,
         session_actions=_session_actions(session), error=None,
         identity=_identity_view(session), extras=_extras(session.tokens),
-        tokens=_token_panels(session), userinfo=_userinfo_panel(session))
+        tokens=_token_panels(session), userinfo=_userinfo_panel(session), paths=paths)
 
 
 def build_notice(session):

@@ -3,16 +3,16 @@
 
 import asyncio
 import sys
-import threading
 
 import httpx
+import uvicorn
 
 from oauthenticator.cli import parse_args
 from oauthenticator.oauth2.client import OidcClient
 from oauthenticator.oauth2.errors import OAuth2Error
 from oauthenticator.state.session import AuthSession
 from oauthenticator.ui.terminal import report, startup
-from oauthenticator.web.server import create_server
+from oauthenticator.web.app import create_app
 
 REQUEST_TIMEOUT = 30.0
 
@@ -32,23 +32,25 @@ async def run(config):
                               config.post_logout_redirect)
 
         redirect = config.redirect
-        server = create_server(session, redirect.path or '/', config.stdout,
-                               redirect.hostname, redirect.port)
-        threading.Thread(target=server.serve_forever, daemon=True).start()
+        app = create_app(session, redirect.path or '/', config.stdout)
+        server = uvicorn.Server(uvicorn.Config(
+            app, host=redirect.hostname, port=redirect.port,
+            log_level='error', access_log=False))
+        server_task = asyncio.create_task(server.serve())
+
+        while not server.started:
+            await asyncio.sleep(0.01)
 
         url = session.authorization_url()
         startup.open_browser(url, config.no_browser)
 
         try:
-            while not session.finished.is_set() and not session.is_idle():
-                if config.stdout and session.delivered.is_set():
-                    break
-
-                await asyncio.sleep(0.2)
+            await _wait_until_done(session, config)
         except KeyboardInterrupt:
             pass
         finally:
-            server.shutdown()
+            server.should_exit = True
+            await server_task
 
         if session.error is not None:
             print('\nerror:', session.error, file=sys.stderr)
@@ -58,6 +60,15 @@ async def run(config):
             report.print_result(session)
 
         return 0
+
+
+async def _wait_until_done(session, config):
+    """Watchdog: waits for finish, for idle, or (in --stdout mode) for delivery."""
+    while not session.finished.is_set() and not session.is_idle():
+        if config.stdout and session.delivered.is_set():
+            return
+
+        await asyncio.sleep(0.2)
 
 
 def main():
