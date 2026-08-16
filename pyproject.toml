@@ -3,7 +3,9 @@ name = "oauthenticator"
 version = "0.1.0"
 description = "CLI for the OAuth2/OIDC authorization code flow, with a browser callback and token inspection page"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "httpx>=0.28.1",
+]
 
 [project.scripts]
 oauthenticator = "oauthenticator.__main__:main"
