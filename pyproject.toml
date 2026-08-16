@@ -1,0 +1,16 @@
+[project]
+name = "oauthenticator"
+version = "0.1.0"
+description = "CLI for the OAuth2/OIDC authorization code flow, with a browser callback and token inspection page"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+oauthenticator = "oauthenticator:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+include = ["oauthenticator.py"]
