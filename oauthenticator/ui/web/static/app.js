@@ -159,8 +159,13 @@ function appendJsonValue(container, value, depth) {
   }
 }
 
-function showResult(name, data, failed) {
-  const box = document.querySelector('section[data-tab="' + name + '"] .result');
+function showResult(name, label, data, failed) {
+  const panel = document.querySelector('section[data-tab="' + name + '"]');
+  const heading = panel.querySelector('.result-label');
+  const box = panel.querySelector('.result');
+
+  heading.textContent = '— ' + label + ' —';
+  heading.hidden = false;
   box.textContent = '';
   box.classList.toggle('failed', Boolean(failed));
   box.classList.toggle('json-rail', !failed && data !== null && typeof data === 'object');
@@ -188,29 +193,29 @@ function refreshTokens(button) {
 }
 
 function reloadUserinfo() {
-  showResult('userinfo', 'fetching...');
+  showResult('userinfo', 'USERINFO', 'fetching...');
   post(CONFIG.userinfoPath).then(
-    data => showResult('userinfo', data),
-    error => showResult('userinfo', error.message, true));
+    data => showResult('userinfo', 'USERINFO', data),
+    error => showResult('userinfo', 'USERINFO', error.message, true));
 }
 
 function introspect(name) {
-  showResult(name, 'introspecting...');
+  showResult(name, 'INTROSPECTION', 'introspecting...');
   post(CONFIG.introspectPath + '/' + encodeURIComponent(name)).then(
-    data => showResult(name, data),
-    error => showResult(name, error.message, true));
+    data => showResult(name, 'INTROSPECTION', data),
+    error => showResult(name, 'INTROSPECTION', error.message, true));
 }
 
 function revoke(name) {
   if (!window.confirm('Revoke the ' + name + '? This cannot be undone.')) { return; }
 
-  showResult(name, 'revoking...');
+  showResult(name, 'REVOCATION', 'revoking...');
   post(CONFIG.revokePath + '/' + encodeURIComponent(name)).then(
     () => {
-      showResult(name, 'revoked');
+      showResult(name, 'REVOCATION', 'revoked');
       document.querySelector('section[data-tab="' + name + '"]').classList.add('revoked');
     },
-    error => showResult(name, error.message, true));
+    error => showResult(name, 'REVOCATION', error.message, true));
 }
 
 function tick() {

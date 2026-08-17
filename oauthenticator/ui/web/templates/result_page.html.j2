@@ -1,5 +1,5 @@
 {% extends 'base.html.j2' %}
-{% from 'macros.html.j2' import toolbar, identity_block, extras_chips, tabs, error_block %}
+{% from 'macros.html.j2' import toolbar, identity_block, tabs, error_block %}
 
 {% block title %}{{ view.title }}{% endblock %}
 
@@ -26,8 +26,7 @@
 {{ error_block(view.error, view.paths.root) }}
 {% else %}
 {{ identity_block(view.identity) }}
-{{ extras_chips(view.extras) }}
-{{ tabs(view.tokens, view.userinfo) }}
+{{ tabs(view.tokens, view.extras, view.userinfo) }}
 {% endif %}
 </div>
 <script src="{{ view.paths.js }}"></script>

@@ -100,10 +100,8 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 {% endmacro %}
 
 
-{% macro extras_chips(extras) %}
-{% if extras %}
-<div class="meta">{% for name, text in extras %}<span class="chip"><b>{{ name }}</b> {{ text }}</span>{% endfor %}</div>
-{% endif %}
+{% macro extras_panel(extras) %}
+{{ json_section('TOKEN RESPONSE EXTRAS', extras) }}
 {% endmacro %}
 
 
@@ -201,6 +199,7 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 <button type="button" class="icon-button copy-button" title="Copy" onclick="copyValue(this)">{{ icon_copy() }}</button>
 </div>
 {{ token_actions(panel) }}
+<div class="json-label result-label" hidden></div>
 <pre class="result" hidden></pre>
 {{ claims(panel) }}
 {% endmacro %}
@@ -210,6 +209,7 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 <div class="actions">
 <button type="button" class="pill pill-muted" onclick="reloadUserinfo()">{{ icon_refresh() }}Fetch again</button>
 </div>
+<div class="json-label result-label">&mdash; USERINFO &mdash;</div>
 {% if userinfo.data is not none %}
 <pre class="result json-rail">{{ json_node(userinfo.data, 0) }}</pre>
 {% else %}
@@ -218,19 +218,30 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 {% endmacro %}
 
 
-{% macro tabs(tokens, userinfo) %}
+{# Tab order mirrors the flow: the tokens themselves, then what else the token
+   response carried, then what the provider says about the user. The first tab
+   that exists is the selected one. #}
+{% macro tabs(tokens, extras, userinfo) %}
 <nav class="tabs">
 {% for panel in tokens %}
 <button type="button"{% if loop.first %} class="active"{% endif %} data-tab="{{ panel.name }}" onclick="selectTab('{{ panel.name }}')">{{ panel.name }}</button>
 {% endfor %}
-<button type="button"{% if not tokens %} class="active"{% endif %} data-tab="userinfo" onclick="selectTab('userinfo')">userinfo</button>
+{% if extras %}
+<button type="button"{% if not tokens %} class="active"{% endif %} data-tab="extras" onclick="selectTab('extras')">extras</button>
+{% endif %}
+<button type="button"{% if not tokens and not extras %} class="active"{% endif %} data-tab="userinfo" onclick="selectTab('userinfo')">userinfo</button>
 </nav>
 {% for panel in tokens %}
 <section class="panel{% if loop.first %} active{% endif %}{% if panel.revoked %} revoked{% endif %}" data-tab="{{ panel.name }}">
 {{ token_panel(panel) }}
 </section>
 {% endfor %}
-<section class="panel{% if not tokens %} active{% endif %}" data-tab="userinfo">
+{% if extras %}
+<section class="panel{% if not tokens %} active{% endif %}" data-tab="extras">
+{{ extras_panel(extras) }}
+</section>
+{% endif %}
+<section class="panel{% if not tokens and not extras %} active{% endif %}" data-tab="userinfo">
 {{ userinfo_panel(userinfo) }}
 </section>
 {% endmacro %}

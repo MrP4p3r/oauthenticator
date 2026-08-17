@@ -7,6 +7,7 @@ ASGITransport, so nothing here touches a socket.
 """
 
 import contextlib
+import re
 
 import httpx
 
@@ -225,6 +226,44 @@ async def test_page_renders_with_only_an_access_token(oidc_provider):
         assert 'data-tab="access_token"' in response.text
         assert 'data-tab="id_token"' not in response.text
         assert 'data-tab="refresh_token"' not in response.text
+
+
+async def test_extras_tab_sits_between_the_token_tabs_and_userinfo(oidc_provider):
+    """The leftover token-response fields get their own tab, not chips above the tabs."""
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+
+        response = await running.app_client.get('/')
+        # the nav is emitted before the panels, so first occurrence is the tab order
+        tab_order = re.findall(r'data-tab="([^"]+)"', response.text)
+
+        assert tab_order.index('extras') > tab_order.index('refresh_token')
+        assert tab_order.index('extras') < tab_order.index('userinfo')
+        assert 'TOKEN RESPONSE EXTRAS' in response.text
+        assert 'expires_in' in response.text
+        assert 'class="meta"' not in response.text
+
+
+async def test_extras_tab_is_absent_when_the_response_carried_nothing_else(oidc_provider):
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+        running.session.tokens = {'access_token': running.session.tokens['access_token']}
+
+        response = await running.app_client.get('/')
+
+        assert 'data-tab="extras"' not in response.text
+        assert 'TOKEN RESPONSE EXTRAS' not in response.text
+
+
+async def test_every_token_panel_carries_a_slot_for_a_labelled_result(oidc_provider):
+    """Introspection and revocation results render under a header saying what they are."""
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+
+        response = await running.app_client.get('/')
+
+        assert response.text.count('class="json-label result-label" hidden') == 3
+        assert '&mdash; USERINFO &mdash;' in response.text
 
 
 async def test_page_renders_with_a_full_token_set(oidc_provider):

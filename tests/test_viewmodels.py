@@ -86,6 +86,50 @@ def test_identity_view_falls_back_to_unknown_user_without_a_jwt():
     assert view.source is None
     assert view.name == 'Unknown user'
     assert view.facts == []
+    # not 'UU' -- 'Unknown user' is a placeholder, so the tile reads the token instead
+    assert view.initials == 'OA'
+
+
+def test_initials_prefer_the_given_and_family_name_claims(token_signer):
+    id_token = token_signer.sign({'sub': 'user-1', 'name': 'ignored entirely',
+                                  'given_name': 'Ada', 'family_name': 'Lovelace'})
+    session = FakeSession(tokens={'id_token': id_token})
+
+    assert viewmodels._identity_view(session).initials == 'AL'
+
+
+def test_initials_survive_a_name_in_a_non_latin_script(token_signer):
+    """A Cyrillic name used to split into zero words and render as a question mark."""
+    id_token = token_signer.sign({'sub': 'user-1', 'name': 'Глеб Гетманенко'})
+    session = FakeSession(tokens={'id_token': id_token})
+
+    assert viewmodels._identity_view(session).initials == 'ГГ'
+
+
+def test_initials_take_the_local_part_of_an_email_shaped_username(token_signer):
+    id_token = token_signer.sign({'sub': 'user-1', 'preferred_username': 'gleb@example.com'})
+    session = FakeSession(tokens={'id_token': id_token})
+
+    assert viewmodels._identity_view(session).initials == 'GL'
+
+
+def test_initials_fall_back_to_the_sub_claim_when_no_name_claim_exists(token_signer):
+    id_token = token_signer.sign({'sub': 'ff01dead'})
+    session = FakeSession(tokens={'id_token': id_token})
+
+    assert viewmodels._identity_view(session).initials == 'FF'
+
+
+def test_initials_never_render_a_question_mark(token_signer):
+    """Every rung of the ladder yields letters, so the placeholder is unreachable."""
+    cases = [
+        {'id_token': token_signer.sign({'name': 'Ada'})},
+        {'id_token': token_signer.sign({'name': '!!! ???'})},
+        {'access_token': 'opaque-at'},
+    ]
+
+    for tokens in cases:
+        assert viewmodels._identity_view(FakeSession(tokens=tokens)).initials != '?'
 
 
 def test_extras_keeps_only_non_standard_or_non_string_token_fields(token_signer):
@@ -98,10 +142,10 @@ def test_extras_keeps_only_non_standard_or_non_string_token_fields(token_signer)
 
     extras = viewmodels._extras(tokens)
 
-    names = dict(extras)
-    assert 'access_token' not in names
-    assert names['token_type'] == 'Bearer'
-    assert names['extra_metadata'] == '{"nested": true}'
+    assert 'access_token' not in extras
+    assert extras['token_type'] == 'Bearer'
+    # kept as the provider sent it, so the page can pretty-print it as JSON
+    assert extras['extra_metadata'] == {'nested': True}
 
 
 def test_token_panels_include_only_tokens_present_as_strings():

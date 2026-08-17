@@ -2,13 +2,12 @@
 
 An identity card built from the id_token, or from the access_token when
 that is a JWT too, heads the page and falls back to sub alone when no name
-claims are present. Below it one tab per token plus a userinfo tab, each
-carrying its own expiry, decoded claims and available actions. Decoding is
-unverified base64url -- no key material is fetched, so it is for inspection
-only, never for trust.
+claims are present. Below it one tab per token, each carrying its own expiry,
+decoded claims and available actions, then a tab for whatever else the token
+response held, then a userinfo tab. Decoding is unverified base64url -- no key
+material is fetched, so it is for inspection only, never for trust.
 """
 
-import json
 import re
 from dataclasses import dataclass, field
 
@@ -17,7 +16,9 @@ from oauthenticator.oauth2.jwt import Jwt
 from oauthenticator.oauth2.tokens import TIME_CLAIMS, TOKEN_NAMES, expires_at, is_number
 
 CURL_FALLBACK = 'https://api.example.com/resource'
-NAME_SPLIT_PATTERN = re.compile(r'[^0-9A-Za-z]+')
+INITIALS_LENGTH = 2
+# Unicode-aware for str patterns, so a name in any script still splits into words.
+NAME_SPLIT_PATTERN = re.compile(r'\W+')
 
 
 @dataclass
@@ -156,8 +157,9 @@ def _error_view(session):
 
 def _identity_view(session):
     identity = Identity.from_tokens(session.tokens)
+    initials = _initials(identity, session.tokens)
     if identity.source is None:
-        return IdentityView(source=None, picture=None, name='Unknown user', initials='?',
+        return IdentityView(source=None, picture=None, name='Unknown user', initials=initials,
                             email=None, email_verified=False, facts=[])
 
     name = identity.name
@@ -166,28 +168,62 @@ def _identity_view(session):
              if identity.claim(key) is not None and identity.claim(key) != name]
 
     return IdentityView(
-        source=identity.source, picture=identity.picture, name=name, initials=_initials(name),
+        source=identity.source, picture=identity.picture, name=name, initials=initials,
         email=email, email_verified=identity.email_verified, facts=facts)
 
 
-def _initials(name):
-    """First letter of each of the first two name segments, split on non-alphanumerics."""
-    words = [word for word in NAME_SPLIT_PATTERN.split(name) if word]
-    letters = ''.join(word[0] for word in words[:2])
+def _initials(identity, tokens):
+    """Two letters for the avatar tile, from the most specific claim that yields any.
 
-    return letters.upper() or '?'
+    Walks real name claims down to the raw token text rather than giving up: an
+    opaque pair of characters still identifies the tile, where a question mark
+    says only that this failed. Identity.name is deliberately not consulted --
+    it substitutes 'Unknown user' when no claim carries a name, which would put
+    the initials of a placeholder on screen.
+    """
+    given = identity.claim('given_name')
+    family = identity.claim('family_name')
+    if given and family:
+        return (given[0] + family[0]).upper()
+
+    for key in Identity.NAME_CLAIMS:
+        letters = _initials_of(identity.claim(key))
+        if letters:
+            return letters
+
+    return _initials_of(_first_token(tokens))
+
+
+def _initials_of(text):
+    """Initials of the first two words, or the leading characters of a single word."""
+    if not text:
+        return ''
+
+    local_part = text.split('@')[0]
+    words = [word for word in NAME_SPLIT_PATTERN.split(local_part) if word]
+    if len(words) >= INITIALS_LENGTH:
+        return ''.join(word[0] for word in words[:INITIALS_LENGTH]).upper()
+
+    return (words[0] if words else local_part)[:INITIALS_LENGTH].upper()
+
+
+def _first_token(tokens):
+    for name in TOKEN_NAMES:
+        value = (tokens or {}).get(name)
+        if isinstance(value, str) and value:
+            return value
+
+    return None
 
 
 def _extras(tokens):
-    extras = []
+    """Whatever the token response carried besides the tokens themselves.
 
-    for name, value in tokens.items():
-        if name in TOKEN_NAMES and isinstance(value, str):
-            continue
-
-        extras.append((name, value if isinstance(value, str) else json.dumps(value)))
-
-    return extras
+    Kept as the provider sent it, types intact, so the page can pretty-print it
+    as JSON rather than as flattened text.
+    """
+    return {name: value for name, value in tokens.items()
+            if not (name in TOKEN_NAMES and isinstance(value, str))}
 
 
 def _token_panels(session):
