@@ -60,8 +60,8 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 {% macro toolbar(view) %}
 <div class="bar">
 <button type="button" class="title" id="page-title">$ oauthenticator</button>
-<span class="bar-spacer"></span>
-<span class="status-dot live" id="status-dot"></span>
+<span class="bar-spacer" id="bar-status"></span>
+<span class="status-dot live" id="status-dot" role="status" aria-label="CLI running"></span>
 {% if view.error is not none %}
 <button type="button" class="pill pill-muted" id="btn-refresh" data-label="Refresh" disabled>Refresh</button>
 <button type="button" class="pill pill-danger" id="btn-end-session" data-label="End session" disabled>End session</button>
@@ -82,7 +82,7 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 {% macro identity_block(identity) %}
 <div class="identity">
 {% if identity.picture is not none %}
-<img class="avatar" src="{{ identity.picture }}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">
+<img class="avatar" src="{{ identity.picture }}" alt="" referrerpolicy="no-referrer" data-initials="{{ identity.initials }}" onerror="avatarFailed(this)">
 {% else %}
 <div class="avatar avatar-fallback">{{ identity.initials }}</div>
 {% endif %}
@@ -138,14 +138,16 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 
 
 {# Recursive pretty-printer for already-decoded JSON claims: 2-space indent, keys in
-   var(--info), string values in var(--accent), numbers in var(--ok). Escaping is not a
-   Python concern here -- every key and scalar reaches the page through a plain {{ }}
-   expression, so Jinja's autoescaping covers it exactly like every other macro below. #}
+   var(--info), string values in var(--accent), numbers in var(--ok). Keys and string
+   values go through the `tojson` filter, not a plain {{ }}, so a value containing a
+   quote, backslash or newline still prints as valid JSON syntax instead of breaking
+   the pretty-printed layout; `tojson`'s output is autoescape-safe like every other
+   expression in this file, so there is still no `|safe` anywhere. #}
 {%- macro json_node(value, depth) -%}
 {%- if value is mapping -%}
 {%- if not value -%}{}{%- else -%}{
 {%- for key, item in value.items() -%}
-{{ "\n" }}{{ '  ' * (depth + 1) }}<span class="json-key">"{{ key }}"</span>: {{ json_node(item, depth + 1) }}{% if not loop.last %},{% endif %}
+{{ "\n" }}{{ '  ' * (depth + 1) }}<span class="json-key">{{ key | tojson }}</span>: {{ json_node(item, depth + 1) }}{% if not loop.last %},{% endif %}
 {%- endfor -%}
 {{ "\n" }}{{ '  ' * depth }}}
 {%- endif -%}
@@ -161,7 +163,7 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 {%- elif value is none -%}
 <span class="json-string">null</span>
 {%- elif value is string -%}
-<span class="json-string">"{{ value }}"</span>
+<span class="json-string">{{ value | tojson }}</span>
 {%- elif value is number -%}
 <span class="json-number">{{ value }}</span>
 {%- else -%}

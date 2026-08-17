@@ -65,7 +65,9 @@ button { font-family: inherit; color: var(--fg); cursor: pointer; background: no
   display: flex; align-items: center; gap: 0.625rem;
   padding-bottom: 0.9375rem; border-bottom: 1px solid var(--border);
 }
-.bar-spacer { flex: 1; }
+.bar-spacer {
+  flex: 1; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--faint);
+}
 .title {
   font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 13.5px;
   color: var(--accent); padding: 0; cursor: default;

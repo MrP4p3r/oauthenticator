@@ -23,7 +23,10 @@ function ping() {
 
 function markStopped() {
   clearInterval(pinger);
-  document.getElementById('status-dot').classList.remove('live');
+  document.getElementById('bar-status').textContent = 'stopped';
+  const dot = document.getElementById('status-dot');
+  dot.classList.remove('live');
+  dot.setAttribute('aria-label', 'CLI stopped');
   document.getElementById('page-title').disabled = true;
   ['btn-refresh', 'btn-end-session', 'btn-quit'].forEach(id => {
     const button = document.getElementById(id);
@@ -32,6 +35,13 @@ function markStopped() {
       button.textContent = button.dataset.label;
     }
   });
+}
+
+function avatarFailed(img) {
+  const fallback = document.createElement('div');
+  fallback.className = 'avatar avatar-fallback';
+  fallback.textContent = img.dataset.initials;
+  img.replaceWith(fallback);
 }
 
 function quitCli(button) {
