@@ -202,14 +202,38 @@ def test_token_panel_decoded_is_none_for_an_opaque_token():
     assert panel.decoded is None
 
 
-def test_token_panel_decoded_times_flag_exp_as_the_deadline(token_signer):
+def test_lifetime_reads_both_ends_from_the_jwt_claims(token_signer):
     token = token_signer.sign({'sub': 'user-1', 'iat': 1000, 'exp': 2000})
     session = FakeSession(tokens={'access_token': token})
 
-    panel = viewmodels._token_panel(session, 'access_token')
+    lifetime = viewmodels._token_panel(session, 'access_token').lifetime
 
-    by_claim = {time_claim.claim: time_claim.is_deadline for time_claim in panel.decoded.times}
-    assert by_claim == {'iat': False, 'exp': True}
+    assert (lifetime.start, lifetime.start_label, lifetime.expires_at) == (1000, 'iat', 2000)
+
+
+def test_lifetime_falls_back_to_nbf_when_a_token_carries_no_iat(token_signer):
+    token = token_signer.sign({'sub': 'user-1', 'nbf': 1500, 'exp': 2000})
+    session = FakeSession(tokens={'access_token': token})
+
+    lifetime = viewmodels._token_panel(session, 'access_token').lifetime
+
+    assert (lifetime.start, lifetime.start_label) == (1500, 'nbf')
+
+
+def test_lifetime_of_an_opaque_token_runs_from_when_it_was_received():
+    """No claims to read, but expires_in plus the arrival time still bound its life."""
+    session = FakeSession(tokens={'refresh_token': 'opaque-rt', 'refresh_expires_in': 600},
+                          received_at=1000)
+
+    lifetime = viewmodels._token_panel(session, 'refresh_token').lifetime
+
+    assert (lifetime.start, lifetime.start_label, lifetime.expires_at) == (1000, 'recv', 1600)
+
+
+def test_no_lifetime_when_nothing_bounds_the_token():
+    session = FakeSession(tokens={'refresh_token': 'opaque-rt'}, received_at=1000)
+
+    assert viewmodels._token_panel(session, 'refresh_token').lifetime is None
 
 
 def test_build_notice_reports_a_terminal_message_and_reflects_the_error_state():

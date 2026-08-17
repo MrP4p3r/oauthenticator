@@ -4,12 +4,29 @@ from oauthenticator.oauth2.jwt import Jwt
 
 TIME_FORMAT = '%Y-%m-%d %H:%M:%S UTC'
 TOKEN_NAMES = ('access_token', 'id_token', 'refresh_token')
-TIME_CLAIMS = ('iat', 'nbf', 'exp', 'auth_time', 'updated_at')
+START_CLAIMS = ('iat', 'nbf')
 LIFETIME_FIELDS = {'access_token': 'expires_in', 'refresh_token': 'refresh_expires_in'}
 
 
 def is_number(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def issued_at(tokens, name, received_at):
+    """When one token's life began, with a label naming where that came from.
+
+    Falls back to the moment the token set arrived, so an opaque token -- which
+    carries no claims at all but still has a lifetime worth drawing -- gets a
+    start too. The label says which it was, since 'recv' is our observation
+    while 'iat' is the provider's assertion.
+    """
+    decoded = Jwt.decode(tokens[name])
+    if decoded is not None:
+        for claim in START_CLAIMS:
+            if is_number(decoded['payload'].get(claim)):
+                return decoded['payload'][claim], claim
+
+    return received_at, 'recv'
 
 
 def expires_at(tokens, name, received_at):

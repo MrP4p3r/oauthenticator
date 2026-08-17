@@ -9,11 +9,11 @@ material is fetched, so it is for inspection only, never for trust.
 """
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from oauthenticator.oauth2.identity import Identity
 from oauthenticator.oauth2.jwt import Jwt
-from oauthenticator.oauth2.tokens import TIME_CLAIMS, TOKEN_NAMES, expires_at, is_number
+from oauthenticator.oauth2.tokens import TOKEN_NAMES, expires_at, issued_at
 
 CURL_FALLBACK = 'https://api.example.com/resource'
 INITIALS_LENGTH = 2
@@ -22,10 +22,12 @@ NAME_SPLIT_PATTERN = re.compile(r'\W+')
 
 
 @dataclass
-class TimeClaimView:
-    claim: str
-    value: float
-    is_deadline: bool
+class LifetimeView:
+    """Both ends of a token's life, for the bar that draws how much of it is spent."""
+
+    start: float
+    start_label: str
+    expires_at: float
 
 
 @dataclass
@@ -33,14 +35,13 @@ class DecodedTokenView:
     header: dict
     payload: dict
     signature: str
-    times: list = field(default_factory=list)
 
 
 @dataclass
 class TokenPanelView:
     name: str
     value: str
-    expires_at: float | None
+    lifetime: LifetimeView | None
     is_id_token: bool
     can_curl: bool
     curl_command: str | None
@@ -242,11 +243,21 @@ def _token_panel(session, name):
         curl_command = f'curl -H "Authorization: Bearer {value}" "{endpoint}"'
 
     return TokenPanelView(
-        name=name, value=value, expires_at=expires_at(session.tokens, name, session.received_at),
+        name=name, value=value, lifetime=_lifetime(session, name),
         is_id_token=is_id_token, can_curl=name == 'access_token', curl_command=curl_command,
         can_introspect=not is_id_token and session.client.supports('introspection_endpoint'),
         can_revoke=not is_id_token and session.client.supports('revocation_endpoint'),
         revoked=name in session.revoked, decoded=_decoded_token(value))
+
+
+def _lifetime(session, name):
+    """None when the token's expiry is unknowable -- there is no life to draw."""
+    expiry = expires_at(session.tokens, name, session.received_at)
+    start, start_label = issued_at(session.tokens, name, session.received_at)
+    if expiry is None or start is None:
+        return None
+
+    return LifetimeView(start=start, start_label=start_label, expires_at=expiry)
 
 
 def _decoded_token(value):
@@ -254,11 +265,8 @@ def _decoded_token(value):
     if decoded is None:
         return None
 
-    times = [TimeClaimView(claim=claim, value=decoded['payload'][claim], is_deadline=claim == 'exp')
-             for claim in TIME_CLAIMS if is_number(decoded['payload'].get(claim))]
-
     return DecodedTokenView(header=decoded['header'], payload=decoded['payload'],
-                            signature=decoded['signature'], times=times)
+                            signature=decoded['signature'])
 
 
 def _userinfo_panel(session):

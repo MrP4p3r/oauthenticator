@@ -21,6 +21,7 @@
   --tab-idle: #9c9280; --tab-active-hover: #bd7f38; --dot-idle: #c9bfa8;
   --fg-value: #4b4638; --fg-dim: #9c9280;
   --bg-error-tile: #f6e8e0; --border-error-tile: #e8d3c7; --fg-error-headline: #a8543a;
+  --bg-tip: #f1e9d8; --fg-tip: #8a5a1e; --border-tip: #ddcfb0;
   --life-ok: #4f8a56; --life-warn: #b8862f; --life-critical: #c0503f;
 }
 @media (prefers-color-scheme: dark) {
@@ -39,6 +40,7 @@
     --tab-idle: #8a8177; --tab-active-hover: #eec283; --dot-idle: #4a453c;
     --fg-value: #b8b0a2; --fg-dim: #6e6459;
     --bg-error-tile: #2b1c17; --border-error-tile: #3a2420; --fg-error-headline: #e6a58c;
+    --bg-tip: #2a2420; --fg-tip: #e2b468; --border-tip: #3a322a;
     --life-ok: #8fbf8f; --life-warn: #d4a24a; --life-critical: #d9695a;
   }
 }
@@ -60,6 +62,7 @@ html[data-theme="light"] {
   --tab-idle: #9c9280; --tab-active-hover: #bd7f38; --dot-idle: #c9bfa8;
   --fg-value: #4b4638; --fg-dim: #9c9280;
   --bg-error-tile: #f6e8e0; --border-error-tile: #e8d3c7; --fg-error-headline: #a8543a;
+  --bg-tip: #f1e9d8; --fg-tip: #8a5a1e; --border-tip: #ddcfb0;
   --life-ok: #4f8a56; --life-warn: #b8862f; --life-critical: #c0503f;
 }
 html[data-theme="dark"] {
@@ -78,6 +81,7 @@ html[data-theme="dark"] {
   --tab-idle: #8a8177; --tab-active-hover: #eec283; --dot-idle: #4a453c;
   --fg-value: #b8b0a2; --fg-dim: #6e6459;
   --bg-error-tile: #2b1c17; --border-error-tile: #3a2420; --fg-error-headline: #e6a58c;
+  --bg-tip: #2a2420; --fg-tip: #e2b468; --border-tip: #3a322a;
   --life-ok: #8fbf8f; --life-warn: #d4a24a; --life-critical: #d9695a;
 }
 
@@ -100,7 +104,6 @@ button { font-family: inherit; color: var(--fg); cursor: pointer; background: no
 button:disabled { cursor: not-allowed; color: var(--faint); border-color: var(--border-disabled); }
 .icon { width: 12px; height: 12px; flex-shrink: 0; }
 .hint { color: var(--muted); font-size: 0.7rem; }
-.expired { color: var(--danger); font-weight: 600; }
 
 /* Toolbar */
 
@@ -222,7 +225,6 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
   color: var(--fg-value); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .token-value.open .value { white-space: pre-wrap; word-break: break-all; }
-.value-expiry { color: var(--faint); font-size: 10.5px; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
 /* A bare icon reads as decoration, so it gets a hit area of its own to tint on hover. */
 .copy-button {
   display: flex; align-items: center; justify-content: center; flex-shrink: 0;
@@ -235,9 +237,45 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 .actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
 .actions .pill { font-family: 'IBM Plex Mono', monospace; padding: 5px 11px; }
 
-.times { margin-top: 0.6rem; display: flex; flex-direction: column; gap: 2px; }
-.times-line { color: var(--muted); font-size: 10px; font-family: 'IBM Plex Mono', monospace; }
-.times-claim { color: var(--faint); }
+/* Token lifetime bar */
+
+.life {
+  margin-top: 9px; display: flex; align-items: center; gap: 8px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: var(--fg-dim);
+}
+.life-stamp {
+  position: relative; white-space: nowrap;
+  border-bottom: 1px dotted transparent; transition: border-color 0.15s ease;
+}
+/* The tooltip is the only affordance here, so the dotted rule announces it. */
+.life-stamp:hover { border-bottom-color: currentColor; }
+.life-tip {
+  position: absolute; left: 0; bottom: calc(100% + 7px); z-index: 5;
+  opacity: 0; visibility: hidden; transition: opacity 0.12s ease; pointer-events: none;
+  white-space: nowrap; padding: 4px 8px; border-radius: 4px;
+  background: var(--bg-tip); color: var(--fg-tip); border: 1px solid var(--border-tip);
+}
+.life-stamp:hover .life-tip { opacity: 1; visibility: visible; }
+.life-exp .life-tip { left: auto; right: 0; }
+.life-track {
+  flex: 1; position: relative; height: 3px; border-radius: 2px; background: var(--border);
+}
+.life-fill, .life-dot {
+  position: absolute; background: var(--life-ok);
+  transition: width 0.3s ease, left 0.3s ease, background-color 0.6s ease, box-shadow 0.6s ease;
+}
+.life-fill { left: 0; top: 0; width: 0; height: 100%; border-radius: 2px; }
+.life-dot {
+  left: 0; top: 50%; margin-top: -3px; transform: translateX(-50%);
+  width: 6px; height: 6px; border-radius: 50%; box-shadow: 0 0 0 2px var(--bg);
+}
+.life-warn .life-fill, .life-warn .life-dot { background: var(--life-warn); }
+.life-warn .life-exp { color: var(--life-warn); }
+.life-critical .life-fill { background: var(--life-critical); box-shadow: 0 0 6px var(--life-critical); }
+.life-critical .life-dot {
+  background: var(--life-critical); box-shadow: 0 0 0 2px var(--bg), 0 0 6px var(--life-critical);
+}
+.life-critical .life-exp { color: var(--life-critical); font-weight: 600; }
 
 /* JSON claims */
 

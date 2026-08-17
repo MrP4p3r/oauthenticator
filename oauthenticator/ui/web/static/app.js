@@ -224,8 +224,23 @@ function tick() {
   document.querySelectorAll('[data-time]').forEach(node => {
     const left = Number(node.dataset.time) - now;
     node.textContent = left >= 0 ? 'in ' + clock(left) : clock(-left) + ' ago';
-    node.classList.toggle('expired', left < 0 && 'deadline' in node.dataset);
   });
+  document.querySelectorAll('.life-track').forEach(track => drawLifetime(track, now));
+}
+
+// Only the percentage and the zone class; every colour stays in the stylesheet.
+function drawLifetime(track, now) {
+  const start = Number(track.dataset.lifeStart);
+  const span = Number(track.dataset.lifeEnd) - start;
+  const elapsed = span > 0 ? Math.min(Math.max((now - start) / span, 0), 1) : 1;
+  const percent = (elapsed * 100).toFixed(1) + '%';
+
+  track.querySelector('.life-fill').style.width = percent;
+  track.querySelector('.life-dot').style.left = percent;
+
+  const row = track.closest('.life');
+  row.classList.toggle('life-warn', elapsed >= 0.7 && elapsed < 0.9);
+  row.classList.toggle('life-critical', elapsed >= 0.9);
 }
 
 function clock(seconds) {

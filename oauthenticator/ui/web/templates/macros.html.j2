@@ -50,10 +50,18 @@
 {%- endmacro -%}
 
 
-{% macro expiry(expires_at) %}
-{%- if expires_at is not none -%}
-expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
-{%- endif -%}
+{# Both ends of the token's life as absolute UTC, which is why nothing here jitters:
+   every timestamp is the same character count. The relative form lives in the hover
+   tooltip, where it is free to change width. app.js drives the fill, the dot and the
+   ramp class; the markup only says where the ends are. #}
+{% macro lifetime_bar(lifetime) %}
+<div class="life">
+<span class="life-stamp">{{ lifetime.start_label }} {{ lifetime.start | format_time }}<span class="life-tip" data-time="{{ lifetime.start | format_epoch }}"></span></span>
+<div class="life-track" data-life-start="{{ lifetime.start | format_epoch }}" data-life-end="{{ lifetime.expires_at | format_epoch }}">
+<div class="life-fill"></div><div class="life-dot"></div>
+</div>
+<span class="life-stamp life-exp">exp {{ lifetime.expires_at | format_time }}<span class="life-tip" data-time="{{ lifetime.expires_at | format_epoch }}"></span></span>
+</div>
 {% endmacro %}
 
 
@@ -124,17 +132,6 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 {% endmacro %}
 
 
-{% macro times_block(times) %}
-{% if times %}
-<div class="times">
-{% for time_claim in times %}
-<div class="times-line"><span class="times-claim">{{ time_claim.claim }}</span> {{ time_claim.value | format_time }} &middot; <span data-time="{{ time_claim.value | format_epoch }}"{% if time_claim.is_deadline %} data-deadline{% endif %}></span></div>
-{% endfor %}
-</div>
-{% endif %}
-{% endmacro %}
-
-
 {# Recursive pretty-printer for already-decoded JSON claims: 2-space indent, keys in
    var(--info), string values in var(--accent), numbers in var(--ok). Keys and string
    values go through the `tojson` filter, not a plain {{ }}, so a value containing a
@@ -182,7 +179,6 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 {% else %}
 {{ json_section('HEADER', panel.decoded.header) }}
 {{ json_section('PAYLOAD', panel.decoded.payload) }}
-{{ times_block(panel.decoded.times) }}
 <div class="json-label">&mdash; SIGNATURE &mdash;</div>
 <pre class="json-rail">{{ panel.decoded.signature }}</pre>
 {% endif %}
@@ -193,11 +189,11 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 <div class="token-value">
 <button type="button" class="chevron-button" title="Expand" onclick="toggleToken(this)">{{ icon_chevron() }}</button>
 <code class="value">{{ panel.value }}</code>
-{% if panel.expires_at is not none %}
-<span class="value-expiry">{{ expiry(panel.expires_at) }}</span>
-{% endif %}
 <button type="button" class="copy-button" title="Copy" onclick="copyValue(this)">{{ icon_copy() }}</button>
 </div>
+{% if panel.lifetime is not none %}
+{{ lifetime_bar(panel.lifetime) }}
+{% endif %}
 {{ token_actions(panel) }}
 <div class="json-label result-label" hidden></div>
 <pre class="result" hidden></pre>

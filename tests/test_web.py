@@ -42,6 +42,17 @@ class RunningApp:
             CALLBACK_PATH, params=callback_location.params, follow_redirects=False)
 
 
+def panel_of(html, name):
+    """One tab's <section>, so an assertion cannot leak into the panels after it.
+
+    The leading chunk is everything before the first section, nav included -- and the
+    nav carries data-tab on its buttons too, so it has to be dropped first.
+    """
+    sections = html.split('<section class="panel')[1:]
+
+    return next(part for part in sections if f'data-tab="{name}"' in part)
+
+
 @contextlib.asynccontextmanager
 async def running_app(provider, *, stdout_mode=False, client_id=CLIENT_ID,
                       client_secret=CLIENT_SECRET, idle_timeout=120.0):
@@ -264,6 +275,52 @@ async def test_every_token_panel_carries_a_slot_for_a_labelled_result(oidc_provi
 
         assert response.text.count('class="json-label result-label" hidden') == 3
         assert '&mdash; USERINFO &mdash;' in response.text
+
+
+async def test_lifetime_bar_renders_both_ends_as_absolute_timestamps(oidc_provider):
+    """Fixed-width timestamps are the point: the row cannot jitter as digits change."""
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+
+        response = await running.app_client.get('/')
+        panel = panel_of(response.text, 'access_token')
+        stamps = re.findall(r'(iat|nbf|recv|exp) (\d{4}-\d\d-\d\d \d\d:\d\d:\d\d UTC)', panel)
+
+        assert [label for label, _ in stamps] == ['iat', 'exp']
+        assert len({len(value) for _, value in stamps}) == 1
+        assert 'data-life-start=' in panel and 'data-life-end=' in panel
+        assert 'expires <span' not in response.text
+
+
+async def test_lifetime_bar_of_an_opaque_token_is_labelled_recv(oidc_provider):
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+
+        response = await running.app_client.get('/')
+        panel = panel_of(response.text, 'refresh_token')
+
+        assert re.search(r'recv \d{4}-\d\d-\d\d', panel)
+
+
+async def test_no_lifetime_bar_when_the_token_has_no_known_expiry(oidc_provider):
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+        running.session.tokens = {'refresh_token': 'opaque-rt'}
+
+        response = await running.app_client.get('/')
+
+        assert 'class="life"' not in response.text
+
+
+async def test_the_decoded_claims_no_longer_repeat_the_timestamps(oidc_provider):
+    """iat and exp belong to the lifetime bar now, not to a block under PAYLOAD."""
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+
+        response = await running.app_client.get('/')
+
+        assert 'class="times"' not in response.text
+        assert 'times-claim' not in response.text
 
 
 async def test_page_renders_with_a_full_token_set(oidc_provider):
