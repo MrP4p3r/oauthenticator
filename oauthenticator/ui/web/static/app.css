@@ -1,21 +1,45 @@
 /* Tokens */
 
+/* The interactive borders and the lifetime ramp are literal values from
+   docs/design/Design.dc.html, which hand-picked them per theme -- deriving them from
+   the base palette with color-mix() lands several points off, worst on the info
+   border. Only the hover tints are derived, where a percentage of a colour over the
+   page background is exactly what the demo's rgba() means. */
+
 :root {
   --bg: #f7f3ec; --bg-raised: #efe6d4; --bg-sunken: #f1e9d8;
   --border: #e6dcc8; --border-soft: #ddcfb0;
-  --fg: #241f18; --muted: #7c7364; --faint: #a89d89;
+  --fg: #241f18; --fg-soft: #5b5548; --muted: #7c7364; --faint: #a89d89;
   --accent: #a86e2b; --accent-ink: #fbf6ec;
   --info: #3f6f95; --danger: #a8543a; --ok: #4f8a56;
   --grid: rgba(168, 110, 43, 0.05);
+  --border-neutral-hover: #cbb98e; --border-disabled: #e6dcc8;
+  --border-danger: #e8d3c7; --border-danger-hover: #d9b8a8; --fg-danger-hover: #8f4530;
+  --border-info: #cddce6; --border-info-hover: #b3cbdc; --fg-info-hover: #2f5a7a;
+  --tint-muted-hover: 8%; --tint-muted-active: 15%;
+  --tint-vivid-hover: 10%; --tint-vivid-active: 18%;
+  --tab-idle: #9c9280; --tab-active-hover: #bd7f38; --dot-idle: #c9bfa8;
+  --fg-value: #4b4638; --fg-dim: #9c9280;
+  --bg-error-tile: #f6e8e0; --border-error-tile: #e8d3c7; --fg-error-headline: #a8543a;
+  --life-ok: #4f8a56; --life-warn: #b8862f; --life-critical: #c0503f;
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #181410; --bg-raised: #221c17; --bg-sunken: #130f0c;
     --border: #2a2420; --border-soft: #332c25;
-    --fg: #f1ece2; --muted: #8a8177; --faint: #5c5348;
+    --fg: #f1ece2; --fg-soft: #c9c2b4; --muted: #8a8177; --faint: #5c5348;
     --accent: #e2b468; --accent-ink: #181410;
     --info: #7fa5c9; --danger: #d98a6b; --ok: #8fbf8f;
     --grid: rgba(226, 180, 104, 0.04);
+    --border-neutral-hover: #4a4030; --border-disabled: #241f1a;
+    --border-danger: #3a2a22; --border-danger-hover: #5a3a2a; --fg-danger-hover: #e8a688;
+    --border-info: #253442; --border-info-hover: #3d5670; --fg-info-hover: #9dc0e0;
+    --tint-muted-hover: 8%; --tint-muted-active: 16%;
+    --tint-vivid-hover: 12%; --tint-vivid-active: 20%;
+    --tab-idle: #8a8177; --tab-active-hover: #eec283; --dot-idle: #4a453c;
+    --fg-value: #b8b0a2; --fg-dim: #6e6459;
+    --bg-error-tile: #2b1c17; --border-error-tile: #3a2420; --fg-error-headline: #e6a58c;
+    --life-ok: #8fbf8f; --life-warn: #d4a24a; --life-critical: #d9695a;
   }
 }
 /* Attribute selectors carry higher specificity than :root, so a manual toggle always
@@ -24,19 +48,37 @@ html[data-theme="light"] {
   color-scheme: light;
   --bg: #f7f3ec; --bg-raised: #efe6d4; --bg-sunken: #f1e9d8;
   --border: #e6dcc8; --border-soft: #ddcfb0;
-  --fg: #241f18; --muted: #7c7364; --faint: #a89d89;
+  --fg: #241f18; --fg-soft: #5b5548; --muted: #7c7364; --faint: #a89d89;
   --accent: #a86e2b; --accent-ink: #fbf6ec;
   --info: #3f6f95; --danger: #a8543a; --ok: #4f8a56;
   --grid: rgba(168, 110, 43, 0.05);
+  --border-neutral-hover: #cbb98e; --border-disabled: #e6dcc8;
+  --border-danger: #e8d3c7; --border-danger-hover: #d9b8a8; --fg-danger-hover: #8f4530;
+  --border-info: #cddce6; --border-info-hover: #b3cbdc; --fg-info-hover: #2f5a7a;
+  --tint-muted-hover: 8%; --tint-muted-active: 15%;
+  --tint-vivid-hover: 10%; --tint-vivid-active: 18%;
+  --tab-idle: #9c9280; --tab-active-hover: #bd7f38; --dot-idle: #c9bfa8;
+  --fg-value: #4b4638; --fg-dim: #9c9280;
+  --bg-error-tile: #f6e8e0; --border-error-tile: #e8d3c7; --fg-error-headline: #a8543a;
+  --life-ok: #4f8a56; --life-warn: #b8862f; --life-critical: #c0503f;
 }
 html[data-theme="dark"] {
   color-scheme: dark;
   --bg: #181410; --bg-raised: #221c17; --bg-sunken: #130f0c;
   --border: #2a2420; --border-soft: #332c25;
-  --fg: #f1ece2; --muted: #8a8177; --faint: #5c5348;
+  --fg: #f1ece2; --fg-soft: #c9c2b4; --muted: #8a8177; --faint: #5c5348;
   --accent: #e2b468; --accent-ink: #181410;
   --info: #7fa5c9; --danger: #d98a6b; --ok: #8fbf8f;
   --grid: rgba(226, 180, 104, 0.04);
+  --border-neutral-hover: #4a4030; --border-disabled: #241f1a;
+  --border-danger: #3a2a22; --border-danger-hover: #5a3a2a; --fg-danger-hover: #e8a688;
+  --border-info: #253442; --border-info-hover: #3d5670; --fg-info-hover: #9dc0e0;
+  --tint-muted-hover: 8%; --tint-muted-active: 16%;
+  --tint-vivid-hover: 12%; --tint-vivid-active: 20%;
+  --tab-idle: #8a8177; --tab-active-hover: #eec283; --dot-idle: #4a453c;
+  --fg-value: #b8b0a2; --fg-dim: #6e6459;
+  --bg-error-tile: #2b1c17; --border-error-tile: #3a2420; --fg-error-headline: #e6a58c;
+  --life-ok: #8fbf8f; --life-warn: #d4a24a; --life-critical: #d9695a;
 }
 
 /* Base */
@@ -54,7 +96,8 @@ body.has-grid {
 .page { max-width: 48rem; margin: 0 auto; padding: 1.375rem 1.75rem 1.5rem; }
 a { color: var(--accent); }
 button { font-family: inherit; color: var(--fg); cursor: pointer; background: none; border: none; }
-.title:disabled, button:disabled { opacity: 0.55; cursor: not-allowed; }
+/* Higher specificity than the pill colours below, so it wins wherever it applies. */
+button:disabled { cursor: not-allowed; color: var(--faint); border-color: var(--border-disabled); }
 .icon { width: 12px; height: 12px; flex-shrink: 0; }
 .hint { color: var(--muted); font-size: 0.7rem; }
 .expired { color: var(--danger); font-weight: 600; }
@@ -73,7 +116,7 @@ button { font-family: inherit; color: var(--fg); cursor: pointer; background: no
   color: var(--accent); padding: 0; cursor: default;
 }
 .status-dot {
-  width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex-shrink: 0;
+  width: 8px; height: 8px; border-radius: 50%; background: var(--dot-idle); flex-shrink: 0;
 }
 .status-dot.live { background: var(--ok); animation: cli-pulse 2.4s ease-in-out infinite; }
 @keyframes cli-pulse {
@@ -85,16 +128,45 @@ button { font-family: inherit; color: var(--fg); cursor: pointer; background: no
   display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px;
   border: 1px solid var(--border-soft); border-radius: 3px; padding: 5px 10px;
 }
-.pill-muted { color: var(--muted); }
-.pill-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 20%, var(--bg)); }
-.pill-info { color: var(--info); border-color: color-mix(in srgb, var(--info) 20%, var(--bg)); }
+.pill-muted { color: var(--fg-soft); }
+.pill-danger { color: var(--danger); border-color: var(--border-danger); }
+.pill-info { color: var(--info); border-color: var(--border-info); }
 
 .icon-button {
   display: flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px; color: var(--muted);
+  width: 24px; height: 24px; color: var(--fg-soft);
   border: 1px solid var(--border-soft); border-radius: 3px;
 }
 .icon-button .icon { width: 13px; height: 13px; }
+
+/* Interaction states: hover tints the element's own colour into its background, lifts
+   the border and brightens the text; active deepens the tint. Disabled is excluded
+   throughout -- a button that cannot act should not answer the pointer. */
+
+.pill, .icon-button, .copy-button, .tabs button {
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.pill-muted:hover:not(:disabled), .icon-button:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) var(--tint-muted-hover), transparent);
+  border-color: var(--border-neutral-hover); color: var(--fg);
+}
+.pill-muted:active:not(:disabled), .icon-button:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) var(--tint-muted-active), transparent);
+}
+.pill-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) var(--tint-vivid-hover), transparent);
+  border-color: var(--border-danger-hover); color: var(--fg-danger-hover);
+}
+.pill-danger:active:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) var(--tint-vivid-active), transparent);
+}
+.pill-info:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--info) var(--tint-vivid-hover), transparent);
+  border-color: var(--border-info-hover); color: var(--fg-info-hover);
+}
+.pill-info:active:not(:disabled) {
+  background: color-mix(in srgb, var(--info) var(--tint-vivid-active), transparent);
+}
 .theme-toggle .icon-moon { display: none; }
 @media (prefers-color-scheme: dark) {
   .theme-toggle .icon-sun { display: none; }
@@ -126,10 +198,12 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); }
 .tabs button {
   font-family: 'IBM Plex Mono', monospace; font-size: 11px; text-transform: uppercase;
-  letter-spacing: 0.03em; color: var(--faint); padding: 7px 15px; border-radius: 3px 3px 0 0;
+  letter-spacing: 0.03em; color: var(--tab-idle); padding: 7px 15px; border-radius: 3px 3px 0 0;
 }
-.tabs button:hover:not(.active) { color: var(--fg); }
+.tabs button:hover:not(.active) { color: var(--fg-soft); }
 .tabs button.active { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+/* The selected tab stays clickable, so it answers the pointer too. */
+.tabs button.active:hover { background: var(--tab-active-hover); }
 .panel { display: none; padding-top: 1rem; }
 .panel.active { display: block; }
 
@@ -145,11 +219,17 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 .token-value.open .chevron-button .icon { transform: rotate(90deg); }
 .value {
   flex: 1; min-width: 0; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px;
-  color: var(--fg); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: var(--fg-value); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .token-value.open .value { white-space: pre-wrap; word-break: break-all; }
 .value-expiry { color: var(--faint); font-size: 10.5px; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
-.copy-button { color: var(--accent); }
+/* A bare icon reads as decoration, so it gets a hit area of its own to tint on hover. */
+.copy-button {
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 22px; height: 22px; border-radius: 4px; color: var(--accent);
+}
+.copy-button .icon { width: 13px; height: 13px; }
+.copy-button:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
 .panel.revoked .value { text-decoration: line-through; opacity: 0.55; }
 
 .actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
@@ -186,11 +266,12 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 .error-tile {
   width: 3.4rem; height: 3.4rem; border-radius: 6px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  background: color-mix(in srgb, var(--danger) 14%, var(--bg)); color: var(--danger);
+  background: var(--bg-error-tile); border: 1px solid var(--border-error-tile);
+  color: var(--danger);
 }
 .error-tile .icon { width: 18px; height: 18px; }
 .error-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.error-headline { font-size: 13.5px; font-weight: 500; color: var(--danger); }
+.error-headline { font-size: 13.5px; font-weight: 500; color: var(--fg-error-headline); }
 .error-line { color: var(--muted); font-size: 11.5px; }
 .error-source { color: var(--faint); font-size: 10.5px; font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
 .error-detail {
@@ -207,4 +288,4 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 }
 .notice-card .icon { width: 26px; height: 26px; stroke-width: 1.6; color: var(--accent); margin-bottom: 14px; }
 .notice-message { color: var(--fg); font-size: 14px; margin: 0 0 6px; }
-.notice-submessage { color: var(--muted); font-size: 11.5px; margin: 0; }
+.notice-submessage { color: var(--fg-dim); font-size: 11.5px; margin: 0; }

@@ -196,7 +196,7 @@ expires <span data-time="{{ expires_at | format_epoch }}" data-deadline></span>
 {% if panel.expires_at is not none %}
 <span class="value-expiry">{{ expiry(panel.expires_at) }}</span>
 {% endif %}
-<button type="button" class="icon-button copy-button" title="Copy" onclick="copyValue(this)">{{ icon_copy() }}</button>
+<button type="button" class="copy-button" title="Copy" onclick="copyValue(this)">{{ icon_copy() }}</button>
 </div>
 {{ token_actions(panel) }}
 <div class="json-label result-label" hidden></div>
