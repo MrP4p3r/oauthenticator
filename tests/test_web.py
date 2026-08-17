@@ -101,6 +101,25 @@ async def test_rendering_escapes_claim_values(oidc_provider):
         assert 'a"b@example.com' not in page_response.text
 
 
+async def test_rendering_json_escapes_claim_values_as_json(oidc_provider):
+    """A claim carrying JSON metacharacters must not break the pretty-printed block.
+
+    Rendered as a bare "{{ value }}" a quote would close the string early and a
+    raw newline would split the <pre> layout, so the claims panel would show
+    malformed JSON for a token the provider considers perfectly valid.
+    """
+    oidc_provider.identity_claims['broken'] = 'quote:" backslash:\\ newline:\n tag:<b>'
+
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+        page_response = await running.app_client.get('/')
+        claims_block = page_response.text.split('json-string')[1]
+
+        assert '"quote:\\" backslash:\\\\ newline:\\n' in page_response.text
+        assert 'newline:\n' not in claims_block
+        assert '<b>' not in claims_block
+
+
 async def test_callback_failure_renders_an_error_page_with_a_retry_link(oidc_provider):
     oidc_provider.fail_authorization = {'error': 'access_denied',
                                         'error_description': 'the user said no'}
