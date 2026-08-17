@@ -96,7 +96,10 @@ Drop the badge (`id_token`/`access_token` source pill) and the expiry line entir
 Uppercase, `IBM Plex Mono`, active tab gets `background: var(--accent); color: var(--accent-ink)` with squared-off top corners (`border-radius: 3px 3px 0 0`) instead of the current underline treatment.
 
 ### Token panel (`.token`)
-Value row: chevron-right (expand) → mono value → "expires in …" (muted, unchanged countdown logic) → copy icon, on `background: var(--bg-sunken)`.
+Value row: chevron-right (expand) → mono value → copy icon, on `background: var(--bg-sunken)`.
+
+Below it, a **lifetime bar** replaces the old "expires in …" text: `iat <timestamp>` (fixed-width, absolute `YYYY-MM-DD HH:MM:SS UTC` — no ladder/tabular-nums hack needed since every value is the same length) — thin track (`flex:1`, 3px, `var(--border)`) with a filled portion + dot at the elapsed-life % — `exp <timestamp>` right-aligned. Fill/dot/label color ramps with % of life elapsed: `0–70% var(--ok)` · `70–90%` amber (`#d4a24a` / light `#b8862f`) · `>90%` `var(--danger)` with a soft glow (`box-shadow: 0 0 6px`). Animate transitions on both (`transition: width .3s ease, background-color .6s ease, box-shadow .6s ease` on the fill; matching `left`/color/shadow transition on the dot) so the ramp shifts smoothly rather than snapping. Hovering `iat`/`exp` shows a small custom tooltip (not the browser default) above the timestamp with the relative form ("2m ago" / "in 58m") — cue the hover with a dotted underline that appears on `:hover`, since the tooltip itself gives no other affordance. See `Variants.dc.html` for the full rule proof (dark + light, plus the color-ramp states) — do not rebuild the counter/countdown text approach explored earlier, it was rejected for causing layout jitter as digit counts change.
+
 Actions (`.actions`): icon + label pills, same quiet-outline family as the toolbar buttons — Copy as curl (`var(--muted)`), Introspect (`var(--info)`), Revoke (`var(--danger)`).
 
 ### JSON claims (header/payload)
@@ -108,5 +111,12 @@ Same toolbar as the success screen (Refresh/End session disabled since there are
 ### Notice / `--stdout` page
 Centered card: `terminal` icon, message line, "You can close this tab." — no toolbar on this page (it has no interactive session to control).
 
-## Demo file
-`Design.dc.html` in this project shows all of the above, dark and light side by side, including the disabled-toolbar and error states.
+## Interaction states
+Every interactive element gets a hover + active/pressed treatment (transitions ~150ms) — apply only where affordance genuinely helps, skip decorative elements (avatar, verified check, status dot):
+- **Buttons** (Refresh, End session, Quit, theme toggle, Copy as curl, Introspect, Revoke): `cursor: pointer`; hover tints the button's own color into its background (~8–12% opacity) and lightens/deepens its border to match; active/pressed deepens the tint further (~15–20% opacity). Neutral buttons tint amber/accent on hover even though their resting state is muted — that's what signals interactivity. Disabled buttons get no hover/active state at all (`cursor: not-allowed`, static dim style, per the toolbar section above).
+- **Tabs**: inactive tabs get `cursor: pointer` and lighten their text color on hover (`var(--muted)` → `var(--fg)`-ish); the active tab also responds on hover (slightly lighter fill) since it stays clickable/reselectable.
+- **Copy-JWT icon**: give it a proper hit area (~22×22px, `border-radius:4px`) with a tinted-background hover — bare icons with no hit-area feedback read as non-interactive.
+- **iat/exp timestamps**: see lifetime bar section above — dotted underline on hover cues the custom tooltip.
+
+## Demo files
+`Design.dc.html` shows all of the above, dark and light side by side, including the disabled-toolbar and error states, hover/active styling, and the lifetime bar. `Variants.dc.html` documents the lifetime-bar rule in isolation (timestamp-width proof, color-ramp states, light/dark tooltip) for the coding agent to check its own implementation against.

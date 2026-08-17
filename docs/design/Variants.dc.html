@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body { margin: 0; background: #d8d5cd; font-family: 'Space Grotesk', sans-serif; }
+  .tt-wrap { position:relative; cursor:default; }
+  .tt-wrap .tt-bubble { position:absolute; bottom:calc(100% + 7px); opacity:0; visibility:hidden; transition:opacity .12s ease; pointer-events:none; white-space:nowrap; z-index:5; background:#2a2420; color:#e2b468; border:1px solid #3a322a; padding:4px 8px; border-radius:4px; font-size:9.5px; }
+  .tt-wrap:hover .tt-bubble { opacity:1; visibility:visible; }
+  .tt-wrap.tt-forced-open .tt-bubble { opacity:1; visibility:visible; }
+  .tt-wrap .tt-bubble.tt-bubble-light { background:#f1e9d8; color:#8a5a1e; border-color:#ddcfb0; }
+</style>
+</helmet>
+
+<section style="padding:44px; display:flex; flex-direction:column; gap:28px;">
+  <div>
+    <h1 style="font-size:20px; margin:0 0 4px; color:#211d18;">Variants — token lifetime bar</h1>
+    <p style="margin:0; font-size:13px; color:#7a766c; max-width:640px;">iat/exp show as static absolute timestamps (fixed length by construction — no counter jitter to guard against). Hover either one for a custom tooltip with the relative time ("2m ago" / "in 58m"). The lifetime bar itself still needs live current-time to compute its fill %, but that no longer touches label width. Below: the same layout applied to a spread of real timestamps.</p>
+  </div>
+
+  <div style="width:760px; background:#181410; border-radius:10px; padding:20px 28px; font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:#8a8177;">
+    <div style="color:#e2b468; margin-bottom:8px;">the rule</div>
+    <div>iat/exp render as absolute UTC timestamps, ISO-style and zero-padded: <span style="color:#d4a24a;">YYYY-MM-DD HH:MM:SS UTC</span> — every value is exactly the same character count, so width is naturally fixed. No relative-text ladder, no fixed pixel slots, no tabular-nums workaround needed.</div>
+    <div style="margin-top:6px;">Relative context ("2m ago", "in 58m") moves into a small custom tooltip, shown on hover of the timestamp — it's supplementary, not load-bearing, so it's free to change width.</div>
+    <div style="margin-top:6px;">Fill/dot/label color by % of life elapsed: <span style="color:#8fbf8f;">0–70% green</span> · <span style="color:#d4a24a;">70–90% amber</span> · <span style="color:#d9695a;">&gt;90% red (+ glow)</span>.</div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:10px;">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#7a766c; text-transform:uppercase; letter-spacing:0.08em;">proof — same layout, five timestamp spreads (first row's tooltip forced open for reference)</span>
+    <div style="width:760px; background:#181410; border-radius:10px; padding:20px 28px; font-family:'Space Grotesk',sans-serif; display:flex; flex-direction:column; gap:16px;">
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6e6459; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap tt-forced-open" style="white-space:nowrap;">iat 2026-08-17 15:36:59 UTC
+          <span class="tt-bubble" style="left:0;">4s ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#2a2420; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:0.1%; background:#8fbf8f; border-radius:2px;"></div>
+          <div style="position:absolute; left:0.1%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#8fbf8f; box-shadow:0 0 0 2px #130f0c;"></div>
+        </div>
+        <span class="tt-wrap tt-forced-open" style="white-space:nowrap;">exp 2026-08-17 16:36:59 UTC
+          <span class="tt-bubble" style="right:0;">in 59m 56s</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6e6459; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-17 15:35:03 UTC
+          <span class="tt-bubble" style="left:0;">41m ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#2a2420; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:72%; background:#d4a24a; border-radius:2px;"></div>
+          <div style="position:absolute; left:72%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#d4a24a; box-shadow:0 0 0 2px #130f0c;"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap; color:#d4a24a;">exp 2026-08-17 16:16:03 UTC
+          <span class="tt-bubble" style="right:0;">in 16m</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6e6459; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-17 14:32:03 UTC
+          <span class="tt-bubble" style="left:0;">1h 2m ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#2a2420; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:26%; background:#8fbf8f; border-radius:2px;"></div>
+          <div style="position:absolute; left:26%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#8fbf8f; box-shadow:0 0 0 2px #130f0c;"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap;">exp 2026-08-17 18:30:03 UTC
+          <span class="tt-bubble" style="right:0;">in 2h 58m</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6e6459; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-16 23:35:03 UTC
+          <span class="tt-bubble" style="left:0;">16h ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#2a2420; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:67%; background:#8fbf8f; border-radius:2px;"></div>
+          <div style="position:absolute; left:67%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#8fbf8f; box-shadow:0 0 0 2px #130f0c;"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap;">exp 2026-08-17 23:35:03 UTC
+          <span class="tt-bubble" style="right:0;">in 8h</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6e6459; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-14 15:35:03 UTC
+          <span class="tt-bubble" style="left:0;">3d ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#2a2420; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:81%; background:#d4a24a; border-radius:2px;"></div>
+          <div style="position:absolute; left:81%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#d4a24a; box-shadow:0 0 0 2px #130f0c;"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap; color:#d4a24a;">exp 2026-08-18 08:35:03 UTC
+          <span class="tt-bubble" style="right:0;">in 17h</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#6e6459; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-17 14:39:03 UTC
+          <span class="tt-bubble" style="left:0;">56m ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#2a2420; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:94%; background:#d9695a; border-radius:2px; box-shadow:0 0 6px rgba(217,105,90,0.5);"></div>
+          <div style="position:absolute; left:94%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#d9695a; box-shadow:0 0 0 2px #130f0c, 0 0 6px rgba(217,105,90,0.6);"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap; color:#d9695a; font-weight:600;">exp 2026-08-17 15:35:03 UTC
+          <span class="tt-bubble" style="right:0;">in 4m</span>
+        </span>
+      </div>
+
+      <div style="color:#5c5348; font-size:9px; font-family:'IBM Plex Mono',monospace; margin-top:2px;">↑ every timestamp is the same length — width is stable by construction. Hover iat/exp to see the tooltip (row 1 shown forced-open); last row shows the red-zone glow.</div>
+    </div>
+  </div>
+
+  <div style="display:flex; flex-direction:column; gap:10px;">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:11px; color:#7a766c; text-transform:uppercase; letter-spacing:0.08em;">proof — light theme, same five spreads</span>
+    <div style="width:760px; background:#f7f3ec; border:1px solid #e6dcc8; border-radius:10px; padding:20px 28px; font-family:'Space Grotesk',sans-serif; display:flex; flex-direction:column; gap:16px;">
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#7c7364; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap tt-forced-open" style="white-space:nowrap;">iat 2026-08-17 15:36:59 UTC
+          <span class="tt-bubble tt-bubble-light" style="left:0;">4s ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#e6dcc8; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:0.1%; background:#4f8a56; border-radius:2px;"></div>
+          <div style="position:absolute; left:0.1%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#4f8a56; box-shadow:0 0 0 2px #f7f3ec;"></div>
+        </div>
+        <span class="tt-wrap tt-forced-open" style="white-space:nowrap;">exp 2026-08-17 16:36:59 UTC
+          <span class="tt-bubble tt-bubble-light" style="right:0;">in 59m 56s</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#7c7364; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-17 15:35:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="left:0;">41m ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#e6dcc8; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:72%; background:#b8862f; border-radius:2px;"></div>
+          <div style="position:absolute; left:72%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#b8862f; box-shadow:0 0 0 2px #f7f3ec;"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap; color:#b8862f;">exp 2026-08-17 16:16:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="right:0;">in 16m</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#7c7364; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-17 14:32:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="left:0;">1h 2m ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#e6dcc8; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:26%; background:#4f8a56; border-radius:2px;"></div>
+          <div style="position:absolute; left:26%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#4f8a56; box-shadow:0 0 0 2px #f7f3ec;"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap;">exp 2026-08-17 18:30:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="right:0;">in 2h 58m</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#7c7364; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-16 23:35:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="left:0;">16h ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#e6dcc8; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:67%; background:#4f8a56; border-radius:2px;"></div>
+          <div style="position:absolute; left:67%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#4f8a56; box-shadow:0 0 0 2px #f7f3ec;"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap;">exp 2026-08-17 23:35:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="right:0;">in 8h</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#7c7364; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-14 15:35:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="left:0;">3d ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#e6dcc8; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:81%; background:#b8862f; border-radius:2px;"></div>
+          <div style="position:absolute; left:81%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#b8862f; box-shadow:0 0 0 2px #f7f3ec;"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap; color:#b8862f;">exp 2026-08-18 08:35:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="right:0;">in 17h</span>
+        </span>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:10px; font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:#7c7364; font-variant-numeric:tabular-nums;">
+        <span class="tt-wrap" style="white-space:nowrap;">iat 2026-08-17 14:39:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="left:0;">56m ago</span>
+        </span>
+        <div style="flex:1; height:3px; background:#e6dcc8; border-radius:2px; position:relative;">
+          <div style="position:absolute; left:0; top:0; height:100%; transition:width .3s ease, background-color .6s ease, box-shadow .6s ease; width:94%; background:#c0503f; border-radius:2px; box-shadow:0 0 6px rgba(192,80,63,0.35);"></div>
+          <div style="position:absolute; left:94%; top:50%; margin-top:-3px; transform:translateX(-50%); width:6px; height:6px; border-radius:50%; transition:left .3s ease, background-color .6s ease, box-shadow .6s ease; background:#c0503f; box-shadow:0 0 0 2px #f7f3ec, 0 0 6px rgba(192,80,63,0.45);"></div>
+        </div>
+        <span class="tt-wrap" style="white-space:nowrap; color:#c0503f; font-weight:600;">exp 2026-08-17 15:35:03 UTC
+          <span class="tt-bubble tt-bubble-light" style="right:0;">in 4m</span>
+        </span>
+      </div>
+
+      <div style="color:#a89d89; font-size:9px; font-family:'IBM Plex Mono',monospace; margin-top:2px;">↑ same rule, light surface — tooltip flips to a light bubble with dark amber text.</div>
+    </div>
+  </div>
+
+</section>
+
+</x-dc>
+</body>
+</html>
