@@ -169,5 +169,7 @@ def test_token_panel_decoded_times_flag_exp_as_the_deadline(token_signer):
 
 
 def test_build_notice_reports_a_terminal_message_and_reflects_the_error_state():
-    assert 'terminal' in viewmodels.build_notice(FakeSession(error='boom')).message
-    assert 'terminal' in viewmodels.build_notice(FakeSession(tokens={})).message
+    css = '/static/app.css'
+
+    assert 'terminal' in viewmodels.build_notice(FakeSession(error='boom'), css).message
+    assert 'terminal' in viewmodels.build_notice(FakeSession(tokens={}), css).message

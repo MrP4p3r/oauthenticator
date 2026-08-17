@@ -9,6 +9,7 @@ only, never for trust.
 """
 
 import json
+import re
 from dataclasses import dataclass, field
 
 from oauthenticator.oauth2.identity import Identity
@@ -16,6 +17,7 @@ from oauthenticator.oauth2.jwt import Jwt
 from oauthenticator.oauth2.tokens import TIME_CLAIMS, TOKEN_NAMES, expires_at, is_number
 
 CURL_FALLBACK = 'https://api.example.com/resource'
+NAME_SPLIT_PATTERN = re.compile(r'[^0-9A-Za-z]+')
 
 
 @dataclass
@@ -58,10 +60,10 @@ class IdentityView:
     source: str | None
     picture: str | None
     name: str
+    initials: str
     email: str | None
     email_verified: bool
     facts: list
-    expires_at: float | None
 
 
 @dataclass
@@ -74,7 +76,6 @@ class SessionActionsView:
 class ErrorView:
     headline: str
     lines: list
-    has_callback_params: bool
     detail: str
 
 
@@ -109,6 +110,7 @@ class ResultPageView:
 @dataclass
 class NoticeView:
     message: str
+    css: str
 
 
 def build_result_page(session, paths):
@@ -125,11 +127,11 @@ def build_result_page(session, paths):
         tokens=_token_panels(session), userinfo=_userinfo_panel(session), paths=paths)
 
 
-def build_notice(session):
+def build_notice(session, css):
     message = ('The authorization failed, see the terminal.' if session.error is not None
                else 'The tokens are in the terminal.')
 
-    return NoticeView(message=message)
+    return NoticeView(message=message, css=css)
 
 
 def _session_actions(session):
@@ -149,15 +151,14 @@ def _error_view(session):
     if 'error_uri' in params:
         lines.append('error_uri ' + params['error_uri'])
 
-    return ErrorView(headline=headline, lines=lines, has_callback_params=bool(params),
-                     detail=session.error)
+    return ErrorView(headline=headline, lines=lines, detail=session.error)
 
 
 def _identity_view(session):
     identity = Identity.from_tokens(session.tokens)
     if identity.source is None:
-        return IdentityView(source=None, picture=None, name='Unknown user', email=None,
-                            email_verified=False, facts=[], expires_at=None)
+        return IdentityView(source=None, picture=None, name='Unknown user', initials='?',
+                            email=None, email_verified=False, facts=[])
 
     name = identity.name
     email = identity.email if identity.email != name else None
@@ -165,8 +166,16 @@ def _identity_view(session):
              if identity.claim(key) is not None and identity.claim(key) != name]
 
     return IdentityView(
-        source=identity.source, picture=identity.picture, name=name, email=email,
-        email_verified=identity.email_verified, facts=facts, expires_at=identity.expires_at)
+        source=identity.source, picture=identity.picture, name=name, initials=_initials(name),
+        email=email, email_verified=identity.email_verified, facts=facts)
+
+
+def _initials(name):
+    """First letter of each of the first two name segments, split on non-alphanumerics."""
+    words = [word for word in NAME_SPLIT_PATTERN.split(name) if word]
+    letters = ''.join(word[0] for word in words[:2])
+
+    return letters.upper() or '?'
 
 
 def _extras(tokens):

@@ -1,11 +1,14 @@
 {% extends 'base.html.j2' %}
-{% from 'macros.html.j2' import session_actions, identity_block, extras_chips, tabs, error_block %}
+{% from 'macros.html.j2' import toolbar, identity_block, extras_chips, tabs, error_block %}
+
+{% block title %}{{ view.title }}{% endblock %}
 
 {% block head %}
 <link rel="stylesheet" href="{{ view.paths.css }}">
 {% endblock %}
 
 {% block body_attrs %}
+ class="{% if view.error is none %}has-grid{% endif %}"
  data-action-token="{{ view.action_token }}"
  data-ping-path="{{ view.paths.ping }}"
  data-ping-interval="{{ ping_interval }}"
@@ -17,12 +20,8 @@
 {% endblock %}
 
 {% block body %}
-<div class="bar">
-<h1>{{ view.title }}</h1>
-<p class="note">The CLI runs while this page is open.</p>
-{{ session_actions(view.session_actions) }}
-<button onclick="quitCli(this)">Finish and exit CLI</button>
-</div>
+<div class="page">
+{{ toolbar(view) }}
 {% if view.error is not none %}
 {{ error_block(view.error, view.paths.root) }}
 {% else %}
@@ -30,5 +29,6 @@
 {{ extras_chips(view.extras) }}
 {{ tabs(view.tokens, view.userinfo) }}
 {% endif %}
+</div>
 <script src="{{ view.paths.js }}"></script>
 {% endblock %}

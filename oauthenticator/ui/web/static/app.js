@@ -15,15 +15,28 @@ function post(path, payload) {
   }));
 }
 
-function ping() { fetch(CONFIG.pingPath).catch(() => {}); }
+function ping() {
+  fetch(CONFIG.pingPath).then(
+    response => { if (!response.ok) { markStopped(); } },
+    () => markStopped());
+}
+
+function markStopped() {
+  clearInterval(pinger);
+  document.getElementById('status-dot').classList.remove('live');
+  document.getElementById('page-title').disabled = true;
+  ['btn-refresh', 'btn-end-session', 'btn-quit'].forEach(id => {
+    const button = document.getElementById(id);
+    if (button) {
+      button.disabled = true;
+      button.textContent = button.dataset.label;
+    }
+  });
+}
 
 function quitCli(button) {
   button.disabled = true;
-  post(CONFIG.quitPath).then(() => {
-    clearInterval(pinger);
-    button.textContent = 'CLI stopped';
-    document.querySelector('.bar .note').textContent = 'You can close this tab.';
-  });
+  post(CONFIG.quitPath).then(markStopped);
 }
 
 function endSession(button) {
@@ -31,6 +44,15 @@ function endSession(button) {
     + 'for every application using it, not just this one.';
 
   if (window.confirm(question)) { window.open(button.dataset.url, '_blank', 'noopener'); }
+}
+
+function toggleTheme() {
+  const current = document.documentElement.dataset.theme
+    || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  const next = current === 'dark' ? 'light' : 'dark';
+
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem('theme', next);
 }
 
 function selectTab(name) {
@@ -42,22 +64,22 @@ function selectTab(name) {
 
 function toggleToken(button) {
   const open = button.parentElement.classList.toggle('open');
-  button.textContent = open ? '▾' : '▸';
   button.title = open ? 'Collapse' : 'Expand';
 }
 
 function copyValue(button) {
-  copyText(button.parentElement.querySelector('.value').textContent, button, '📋');
+  copyText(button.parentElement.querySelector('.value').textContent, button);
 }
 
 function copyCurl(button) {
-  copyText(button.dataset.curl, button, 'Copy as curl');
+  copyText(button.dataset.curl, button);
 }
 
-function copyText(text, button, restore) {
+function copyText(text, button) {
+  const restore = button.innerHTML;
   const done = () => {
-    button.textContent = '✅';
-    setTimeout(() => { button.textContent = restore; }, 1000);
+    button.textContent = 'copied';
+    setTimeout(() => { button.innerHTML = restore; }, 1000);
   };
 
   if (navigator.clipboard) {
@@ -77,40 +99,95 @@ function copyBySelection(text, done) {
   done();
 }
 
-function showResult(name, text, failed) {
+function jsonSpan(className, text) {
+  const span = document.createElement('span');
+  span.className = className;
+  span.textContent = text;
+
+  return span;
+}
+
+function appendJsonValue(container, value, depth) {
+  const indent = '  '.repeat(depth);
+  const indentInner = '  '.repeat(depth + 1);
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) { container.append('[]'); return; }
+
+    container.append('[\n');
+    value.forEach((item, index) => {
+      container.append(indentInner);
+      appendJsonValue(container, item, depth + 1);
+      container.append(index < value.length - 1 ? ',\n' : '\n');
+    });
+    container.append(indent + ']');
+    return;
+  }
+
+  if (value !== null && typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length === 0) { container.append('{}'); return; }
+
+    container.append('{\n');
+    keys.forEach((key, index) => {
+      container.append(indentInner);
+      container.appendChild(jsonSpan('json-key', JSON.stringify(key)));
+      container.append(': ');
+      appendJsonValue(container, value[key], depth + 1);
+      container.append(index < keys.length - 1 ? ',\n' : '\n');
+    });
+    container.append(indent + '}');
+    return;
+  }
+
+  if (typeof value === 'string') {
+    container.appendChild(jsonSpan('json-string', JSON.stringify(value)));
+  } else if (typeof value === 'number') {
+    container.appendChild(jsonSpan('json-number', String(value)));
+  } else {
+    container.appendChild(jsonSpan('json-string', String(value)));
+  }
+}
+
+function showResult(name, data, failed) {
   const box = document.querySelector('section[data-tab="' + name + '"] .result');
-  box.textContent = text;
+  box.textContent = '';
   box.classList.toggle('failed', Boolean(failed));
+  box.classList.toggle('json-rail', !failed && data !== null && typeof data === 'object');
   box.hidden = false;
+
+  if (!failed && data !== null && typeof data === 'object') {
+    appendJsonValue(box, data, 0);
+  } else {
+    box.textContent = data;
+  }
 }
 
 function refreshTokens(button) {
-  const restore = button.textContent;
-  const note = document.querySelector('.bar .note');
+  const restore = button.innerHTML;
 
   button.disabled = true;
-  button.textContent = 'Refreshing...';
   post(CONFIG.refreshPath).then(
     () => location.reload(),
     error => {
       button.disabled = false;
-      button.textContent = restore;
-      note.textContent = error.message;
-      note.classList.add('failed');
+      button.textContent = 'failed';
+      button.title = error.message;
+      setTimeout(() => { button.innerHTML = restore; button.title = ''; }, 1500);
     });
 }
 
 function reloadUserinfo() {
   showResult('userinfo', 'fetching...');
   post(CONFIG.userinfoPath).then(
-    data => showResult('userinfo', JSON.stringify(data, null, 2)),
+    data => showResult('userinfo', data),
     error => showResult('userinfo', error.message, true));
 }
 
 function introspect(name) {
   showResult(name, 'introspecting...');
   post(CONFIG.introspectPath + '/' + encodeURIComponent(name)).then(
-    data => showResult(name, JSON.stringify(data, null, 2)),
+    data => showResult(name, data),
     error => showResult(name, error.message, true));
 }
 

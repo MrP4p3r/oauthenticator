@@ -6,7 +6,6 @@ every `{{ }}` expression is HTML-escaped by default; nothing here uses `|safe`.
 """
 
 import importlib.resources
-import json
 import time
 
 from jinja2 import Environment, PackageLoader, select_autoescape
@@ -25,7 +24,6 @@ def build_environment():
 
     environment.filters['format_time'] = _format_time
     environment.filters['format_epoch'] = _format_epoch
-    environment.filters['json_pretty'] = _json_pretty
 
     return environment
 
@@ -53,7 +51,3 @@ def _format_time(value):
 
 def _format_epoch(value):
     return f'{value:.0f}'
-
-
-def _json_pretty(value):
-    return json.dumps(value, indent=2)

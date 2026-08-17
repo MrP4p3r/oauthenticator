@@ -2,7 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>oauthenticator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}oauthenticator{% endblock %}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+(function () {
+  var stored = localStorage.getItem('theme');
+  if (stored === 'light' || stored === 'dark') {
+    document.documentElement.dataset.theme = stored;
+  }
+}());
+</script>
 {% block head %}{% endblock %}
 </head>
 <body{% block body_attrs %}{% endblock %}>

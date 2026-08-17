@@ -27,7 +27,7 @@ def build_router(session, callback_path, stdout_mode, paths, environment):
             session.delivered.set()
 
         if stdout_mode:
-            view = viewmodels.build_notice(session)
+            view = viewmodels.build_notice(session, paths.css)
 
             return Response(renderer.render_notice(environment, view), media_type='text/html')
 
