@@ -14,12 +14,15 @@ in-process ASGI app through httpx.ASGITransport with no sockets involved.
 """
 
 import base64
+import logging
 import urllib.parse
 
 import httpx
 
 from oauthenticator.oauth2 import discovery, flow
 from oauthenticator.oauth2.errors import ProviderRequestError
+
+logger = logging.getLogger(__name__)
 
 
 class OidcClient:
@@ -34,6 +37,8 @@ class OidcClient:
 
     async def discover(self):
         url = discovery.discovery_url(self.issuer)
+        logger.info('discovering provider metadata from %s', self.issuer)
+
         self.config = await self._request('GET', url)
         discovery.validate(self.config, url)
 
@@ -47,6 +52,8 @@ class OidcClient:
             self.config, self.client_id, redirect_uri, scope, state, nonce, code_challenge)
 
     async def exchange_code(self, code, redirect_uri, code_verifier):
+        logger.info('exchanging authorization code for tokens')
+
         return await self._token_request({
             'grant_type': 'authorization_code',
             'code': code,
@@ -56,6 +63,8 @@ class OidcClient:
         })
 
     async def refresh(self, refresh_token):
+        logger.info('refreshing the access token')
+
         return await self._token_request({
             'grant_type': 'refresh_token',
             'refresh_token': refresh_token,
@@ -74,17 +83,24 @@ class OidcClient:
         return flow.end_session_url(url, self.client_id, id_token, post_logout_redirect)
 
     async def introspect(self, token, hint):
+        logger.info('introspecting a %s', hint)
+
         return await self._token_action('introspection_endpoint', token, hint)
 
     async def revoke(self, token, hint):
+        logger.info('revoking a %s', hint)
+
         return await self._token_action('revocation_endpoint', token, hint)
 
     async def _token_request(self, form):
         headers = {'Accept': 'application/json'}
         self._authenticate(form, headers)
 
-        return await self._request('POST', self.config['token_endpoint'],
-                                   headers=headers, data=form)
+        response = await self._request('POST', self.config['token_endpoint'],
+                                       headers=headers, data=form)
+        logger.debug('token endpoint returned: %s', sorted(response))
+
+        return response
 
     async def _token_action(self, endpoint, token, hint):
         url = discovery.endpoint_url(self.config, endpoint)
@@ -116,6 +132,8 @@ class OidcClient:
         return 'Basic ' + credentials
 
     async def _request(self, method, url, *, headers=None, data=None):
+        logger.debug('%s %s', method, url)
+
         try:
             response = await self.http_client.request(method, url, headers=headers, data=data)
             response.raise_for_status()

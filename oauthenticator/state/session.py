@@ -32,11 +32,14 @@ Session lifetime
 """
 
 import asyncio
+import logging
 import secrets
 import time
 
 from oauthenticator.oauth2 import pkce
 from oauthenticator.oauth2.errors import OAuth2Error
+
+logger = logging.getLogger(__name__)
 
 
 class AuthSession:
@@ -99,6 +102,7 @@ class AuthSession:
         if 'error' in query:
             if state is not None and state != self.state:
                 self.error = 'state mismatch, ignoring the callback'
+                logger.warning('callback rejected: state mismatch on a provider error redirect')
                 return False
 
             self._handled = True
@@ -110,6 +114,7 @@ class AuthSession:
 
         if state != self.state:
             self.error = 'state mismatch, ignoring the callback'
+            logger.warning('callback rejected: state mismatch')
             return False
 
         self._handled = True

@@ -1,7 +1,10 @@
 """RunConfig: parsed and validated settings for a single CLI run."""
 
+import logging
 from dataclasses import dataclass
 from urllib.parse import urlparse
+
+LOG_LEVELS = (logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG)
 
 
 @dataclass(frozen=True)
@@ -15,6 +18,7 @@ class RunConfig:
     stdout: bool
     idle_timeout: float
     post_logout_redirect: str | None
+    verbosity: int
 
     @property
     def redirect(self):
@@ -25,3 +29,8 @@ class RunConfig:
         redirect = self.redirect
 
         return redirect.scheme == 'http' and bool(redirect.hostname) and bool(redirect.port)
+
+    @property
+    def log_level(self):
+        """Maps the -v repeat count onto the logging ladder, clamping past -vvv to DEBUG."""
+        return LOG_LEVELS[min(self.verbosity, len(LOG_LEVELS) - 1)]

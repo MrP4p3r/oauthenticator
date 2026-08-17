@@ -2,10 +2,14 @@
 """Composition root: builds every runtime object and drives the CLI flow."""
 
 import asyncio
+import logging
+import re
 import sys
 
 import httpx
 import uvicorn
+from rich.console import Console
+from rich.logging import RichHandler
 
 from oauthenticator.cli import parse_args
 from oauthenticator.oauth2.client import OidcClient
@@ -15,9 +19,16 @@ from oauthenticator.ui.terminal import report, startup
 from oauthenticator.web.app import create_app
 
 REQUEST_TIMEOUT = 30.0
+UVICORN_LOGGERS = ('uvicorn', 'uvicorn.error', 'uvicorn.access', 'uvicorn.asgi')
+CALLBACK_CODE_PATTERN = re.compile(r'([?&]code=)[^&\s]*')
+
+logger = logging.getLogger(__name__)
 
 
 async def run(config):
+    _configure_logging(config.log_level)
+    console = Console(soft_wrap=True)
+
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as http_client:
         client = OidcClient(http_client, config.issuer, config.client_id, config.client_secret)
 
@@ -26,7 +37,7 @@ async def run(config):
         except OAuth2Error as error:
             sys.exit(str(error))
 
-        startup.print_endpoints(discovered)
+        startup.print_endpoints(console, discovered)
 
         session = AuthSession(client, config.redirect_uri, config.scope, config.idle_timeout,
                               config.post_logout_redirect)
@@ -34,15 +45,16 @@ async def run(config):
         redirect = config.redirect
         app = create_app(session, redirect.path or '/', config.stdout)
         server = uvicorn.Server(uvicorn.Config(
-            app, host=redirect.hostname, port=redirect.port,
-            log_level='error', access_log=False))
+            app, host=redirect.hostname, port=redirect.port, log_config=None))
+
+        logger.info('starting server on %s:%s', redirect.hostname, redirect.port)
         server_task = asyncio.create_task(server.serve())
 
         while not server.started:
             await asyncio.sleep(0.01)
 
         url = session.authorization_url()
-        startup.open_browser(url, config.no_browser)
+        startup.open_browser(console, url, config.no_browser)
 
         try:
             await _wait_until_done(session, config)
@@ -51,15 +63,50 @@ async def run(config):
         finally:
             server.should_exit = True
             await server_task
+            logger.info('server stopped')
 
         if session.error is not None:
             print('\nerror:', session.error, file=sys.stderr)
             return 1
 
         if config.stdout and session.tokens is not None:
-            report.print_result(session)
+            report.print_result(console, session)
 
         return 0
+
+
+def _configure_logging(level):
+    """Wires the -v ladder into stdlib logging, rendered through rich on stderr.
+
+    uvicorn builds its own handlers by default (its LOGGING_CONFIG dict),
+    which would print access lines straight to stdout regardless of level
+    and bypass this formatting entirely -- log_config=None on the
+    uvicorn.Config above skips that step, so uvicorn.error/access/asgi
+    propagate to this handler instead and are gated by the same level as
+    everything else, rather than being configured separately.
+    """
+    handler = RichHandler(console=Console(stderr=True), show_path=False)
+    logging.basicConfig(level=level, format='%(message)s', handlers=[handler], force=True)
+
+    for name in UVICORN_LOGGERS:
+        logging.getLogger(name).setLevel(level)
+
+    logging.getLogger('uvicorn.access').addFilter(_redact_authorization_code)
+
+
+def _redact_authorization_code(record):
+    """Strips the authorization code out of one uvicorn access log record.
+
+    uvicorn logs the callback request's raw path and query string, which
+    carries the authorization code -- this runs before the record's lazy
+    %-formatting, so the code is replaced in record.args before anything
+    ever renders it, on this logger alone.
+    """
+    if record.args and len(record.args) >= 3 and isinstance(record.args[2], str):
+        redacted_path = CALLBACK_CODE_PATTERN.sub(r'\1REDACTED', record.args[2])
+        record.args = (*record.args[:2], redacted_path, *record.args[3:])
+
+    return True
 
 
 async def _wait_until_done(session, config):

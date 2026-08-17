@@ -41,6 +41,9 @@ def parse_args(argv=None):
     parser.add_argument('--post-logout-redirect', metavar='URI',
                         help='where the provider sends the browser after ending the session, '
                              'omitted by default since it must be registered')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='repeatable: -v warning, -vv info, -vvv debug '
+                             '(default: errors only, applies to uvicorn too)')
 
     args = parser.parse_args(argv)
 
@@ -48,7 +51,7 @@ def parse_args(argv=None):
         issuer=args.issuer, client_id=args.client_id, client_secret=args.client_secret,
         scope=_merge_scopes(args.scope, args.add_scope), redirect_uri=args.redirect_uri,
         no_browser=args.no_browser, stdout=args.stdout, idle_timeout=args.idle_timeout,
-        post_logout_redirect=args.post_logout_redirect)
+        post_logout_redirect=args.post_logout_redirect, verbosity=args.verbose)
 
     if not config.has_valid_redirect_uri:
         sys.exit('--redirect-uri must look like http://localhost:8765/callback')
