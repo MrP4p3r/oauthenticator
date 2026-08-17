@@ -87,8 +87,8 @@ button { font-family: inherit; color: var(--fg); cursor: pointer; background: no
   border: 1px solid var(--border-soft); border-radius: 3px; padding: 5px 10px;
 }
 .pill-muted { color: var(--muted); }
-.pill-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--border-soft)); }
-.pill-info { color: var(--info); border-color: color-mix(in srgb, var(--info) 35%, var(--border-soft)); }
+.pill-danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 20%, var(--bg)); }
+.pill-info { color: var(--info); border-color: color-mix(in srgb, var(--info) 20%, var(--bg)); }
 
 .icon-button {
   display: flex; align-items: center; justify-content: center;
