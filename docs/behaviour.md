@@ -27,24 +27,46 @@ legitimate callback that follows.
 
 An identity card built from the id_token, or from the access_token when
 that is a JWT too, heads the page and falls back to sub alone when no name
-claims are present. Below it, one tab per token plus a userinfo tab, each
-token collapsed to a single line with expand, copy and a live countdown to
-expiry.
+claims are present. Below it, one tab per token, then an extras tab for
+whatever else the token response carried, then a userinfo tab. The first
+tab that exists is the selected one, and the selection is kept in the URL
+hash, so a reload lands where it left off. Each token is collapsed to a
+single line with expand and copy, and its decoded parts sit underneath.
+
+Under the token value sits a lifetime bar, drawn only when the expiry is
+knowable at all. Both ends are absolute UTC and therefore never jitter: the
+start comes from iat or nbf, or from the moment the token set arrived when
+the token carries no claims, labelled so the provider's assertion and our
+own observation are told apart. The fill advances between the two, crossing
+into a warning zone at 70% of the life and a critical one at 90%. The
+relative form — how long until expiry, or how long ago — lives in the hover
+tooltip on either end, where it is free to change width.
 
 ## Page actions
 
-Refresh replaces the whole token set and reloads the page. Userinfo,
-introspection and revocation only report on what exists and render in
-place, next to the token they act on. Revocation asks for confirmation and
-marks the token afterwards.
+Refresh sits in the top bar rather than in a token tab, since it acts on
+the whole set: it merges what the provider reissues over what is held, so a
+token that is not reissued survives, clears the revoked marks and reloads
+the page. Introspection and revocation only report on what exists and
+render in place, in the tab of the token they act on; revocation asks for
+confirmation and strikes the token through afterwards. Userinfo is fetched
+again from its own tab. The access_token tab also hands out its value as a
+ready curl command, aimed at the userinfo endpoint when the provider
+advertises one and at a placeholder URL when it does not.
+
+Quit stops the CLI from the page. The page keeps pinging either way, so
+however the CLI ends — quit, idle timeout or killed in the terminal — the
+ping fails, the status turns to stopped and every action is disabled.
 
 ## Ending the session
 
 Revocation kills tokens, not the login: the provider still recognises the
 browser and hands out a new grant without a prompt. Ending the session
 instead uses RP-initiated logout, opened in a new tab so the result page
-keeps pinging and stays open. `--post-logout-redirect` is off by default
-because providers reject the parameter unless it is registered.
+keeps pinging and stays open. It asks first, since the single sign-on
+session it ends belongs to every application using it, not just this one.
+`--post-logout-redirect` is off by default because providers reject the
+parameter unless it is registered.
 
 ## Output modes
 
