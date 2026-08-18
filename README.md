@@ -12,14 +12,18 @@ trusted.
 
 ## Install
 
+From a clone of this repository:
+
 ```sh
-uv sync
+uv tool install .
 ```
+
+After pulling changes, run `uv tool install --reinstall .`.
 
 ## Usage
 
 ```sh
-uv run oauthenticator --issuer https://issuer.example.com --client-id my-client
+oauthenticator --issuer https://issuer.example.com --client-id my-client
 ```
 
 The browser opens at the authorization URL; the URL is printed either way, so it can
@@ -40,11 +44,12 @@ Useful flags:
 | `--post-logout-redirect` | where the provider sends the browser after ending the session |
 | `-v` | repeatable: `-v` warnings, `-vv` info, `-vvv` debug; errors only by default |
 
-Run `uv run oauthenticator --help` for the full list.
+Run `oauthenticator --help` for the full list.
 
 ## Development
 
 ```sh
+uv sync
 uv run pytest
 ```
 
