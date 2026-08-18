@@ -2,8 +2,10 @@
 """Composition root: builds every runtime object and drives the CLI flow."""
 
 import asyncio
+import errno
 import logging
 import re
+import socket
 import sys
 
 import httpx
@@ -27,6 +29,7 @@ logger = logging.getLogger(__name__)
 
 async def run(config):
     _configure_logging(config.log_level)
+    _ensure_port_is_free(config.redirect.hostname, config.redirect.port)
     console = Console(soft_wrap=True)
 
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as http_client:
@@ -107,6 +110,27 @@ def _redact_authorization_code(record):
         record.args = (*record.args[:2], redacted_path, *record.args[3:])
 
     return True
+
+
+def _ensure_port_is_free(host, port):
+    """Exits with a readable message when the callback port is taken.
+
+    uvicorn reports a bind failure with a traceback and exit code 3, and only
+    after discovery has already run, so the port is probed up front with the
+    same socket options asyncio's create_server uses.
+    """
+    for family, kind, protocol, _, address in socket.getaddrinfo(
+            host, port, type=socket.SOCK_STREAM):
+        with socket.socket(family, kind, protocol) as probe:
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            if family == socket.AF_INET6:
+                probe.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 1)
+
+            try:
+                probe.bind(address)
+            except OSError as error:
+                if error.errno == errno.EADDRINUSE:
+                    sys.exit(f'port {port} is in use; free it or pass --port / --redirect-uri')
 
 
 async def _wait_until_done(session, config):

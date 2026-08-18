@@ -88,8 +88,29 @@ level. Token values, the client secret, the code verifier and the authorization
 code are never logged at any level; the authorization code is stripped out of
 access log lines.
 
-## Known wart
+## Settings
 
-`--client-secret` is passed on the command line, so it lands in shell history
-and is visible in `ps`. An environment variable fallback would fix it, but that
-is a feature rather than a cleanup, and this is a local development tool.
+Connection settings come from flags, `OAUTHENTICATOR_*` variables in the
+process environment, and the same variables in an env file — `.env` in the
+current directory by default, `--env-file` for another one. A flag wins over
+the process environment, which wins over the file, which wins over the
+built-in default. An empty variable still hides the sources below it, so
+`export OAUTHENTICATOR_CLIENT_SECRET=` runs as a public client without editing
+`.env`; the empty value then falls back to the built-in default, or to no value
+at all. A missing default `.env` is skipped, a missing `--env-file` is an
+error. Per-run switches
+(`--no-browser`, `--stdout`, `--idle-timeout`, `-v`) are flags only.
+
+`OAUTHENTICATOR_ADD_SCOPE` is appended before every `--add-scope`, rather than
+replaced by them.
+
+The redirect URI, when given explicitly from any source, is used as is, and a
+host or port set anywhere is ignored with a warning. Otherwise it is built as
+`http://<host>:<port>/callback` from `--host` and `--port`, `localhost` and
+`8765` by default. The server binds to the redirect URI's host and port and
+never falls back to another port, since providers compare the redirect URI
+exactly; a taken port stops the run before discovery with a message.
+
+`--client-secret` on the command line lands in shell history and is visible in
+`ps`; `OAUTHENTICATOR_CLIENT_SECRET` avoids both, and `--help` never shows its
+value.
