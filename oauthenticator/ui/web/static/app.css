@@ -232,6 +232,12 @@ html[data-theme="dark"] .theme-toggle .icon-moon { display: block; }
 }
 .copy-button .icon { width: 13px; height: 13px; }
 .copy-button:hover { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+
+/* Copy feedback: a button trades its own icon for a check, so its box never reflows. */
+.icon-check-plain { display: none; }
+.copied .icon-check-plain { display: block; }
+.copied .icon:not(.icon-check-plain) { display: none; }
+
 .panel.revoked .value { text-decoration: line-through; opacity: 0.55; }
 
 .actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }

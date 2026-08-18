@@ -1,6 +1,7 @@
 const CONFIG = document.body.dataset;
 const ACTION_TOKEN = CONFIG.actionToken;
 let pinger = null;
+const copyTimers = new WeakMap();
 
 function post(path, payload) {
   const body = Object.assign({action_token: ACTION_TOKEN}, payload || {});
@@ -86,10 +87,10 @@ function copyCurl(button) {
 }
 
 function copyText(text, button) {
-  const restore = button.innerHTML;
   const done = () => {
-    button.textContent = 'copied';
-    setTimeout(() => { button.innerHTML = restore; }, 1000);
+    button.classList.add('copied');
+    clearTimeout(copyTimers.get(button));
+    copyTimers.set(button, setTimeout(() => button.classList.remove('copied'), 1000));
   };
 
   if (navigator.clipboard) {
@@ -104,9 +105,10 @@ function copyBySelection(text, done) {
   area.value = text;
   document.body.appendChild(area);
   area.select();
-  document.execCommand('copy');
+  const copied = document.execCommand('copy');
   area.remove();
-  done();
+
+  if (copied) { done(); }
 }
 
 function jsonSpan(className, text) {
