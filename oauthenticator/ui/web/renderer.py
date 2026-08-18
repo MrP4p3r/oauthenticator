@@ -13,6 +13,10 @@ from jinja2 import Environment, PackageLoader, select_autoescape
 from oauthenticator.oauth2.tokens import TIME_FORMAT
 
 PING_INTERVAL = 5
+# The page is UTF-8, so a claim in any script belongs on screen as itself rather than
+# as \uXXXX. This only turns off tojson's ASCII escaping; the HTML metacharacter
+# escaping that keeps the claim block safe is Jinja's own and is untouched by it.
+JSON_DUMPS_KWARGS = {'sort_keys': True, 'ensure_ascii': False}
 
 
 def build_environment():
@@ -22,6 +26,7 @@ def build_environment():
         autoescape=select_autoescape(['html', 'j2']),
         trim_blocks=True, lstrip_blocks=True)
 
+    environment.policies['json.dumps_kwargs'] = JSON_DUMPS_KWARGS
     environment.filters['format_time'] = _format_time
     environment.filters['format_epoch'] = _format_epoch
 

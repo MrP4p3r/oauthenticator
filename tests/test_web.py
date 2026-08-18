@@ -132,6 +132,21 @@ async def test_rendering_json_escapes_claim_values_as_json(oidc_provider):
         assert '<b>' not in claims_block
 
 
+async def test_rendering_keeps_non_ascii_claims_readable(oidc_provider):
+    """The page is UTF-8, so a claim in another script is worth nothing as \\uXXXX."""
+    oidc_provider.identity_claims['name'] = 'Ганс Мюллер'
+    oidc_provider.identity_claims['nickname'] = '日本語'
+
+    async with running_app(oidc_provider) as running:
+        await running.authorize_and_call_back()
+        page_response = await running.app_client.get('/')
+        claims_block = panel_of(page_response.text, 'id_token')
+
+        assert '"Ганс Мюллер"' in claims_block
+        assert '"日本語"' in claims_block
+        assert '\\u' not in claims_block
+
+
 async def test_callback_failure_renders_an_error_page_with_a_retry_link(oidc_provider):
     oidc_provider.fail_authorization = {'error': 'access_denied',
                                         'error_description': 'the user said no'}
