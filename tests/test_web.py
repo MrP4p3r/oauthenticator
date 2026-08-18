@@ -362,3 +362,13 @@ async def test_page_renders_when_the_provider_advertises_no_optional_endpoints(p
         assert 'Revoke</button>' not in response.text
         assert 'End provider session' not in response.text
         assert 'not fetched yet' in response.text or 'userinfo_endpoint' in response.text
+
+
+async def test_static_assets_are_served_for_revalidation(oidc_provider):
+    """A browser that saw an earlier run must not draw this one with that run's assets."""
+    async with running_app(oidc_provider) as running:
+        response = await running.app_client.get('/static/app.js')
+
+        assert response.status_code == 200
+        assert response.headers['cache-control'] == 'no-cache'
+        assert response.headers['etag']
